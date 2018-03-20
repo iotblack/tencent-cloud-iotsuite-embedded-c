@@ -30,8 +30,15 @@
 /* #include "apps/sntp.h" */
 
 #include "tc_iot_device_config.h"
-#include "tc_iot_demo_light.h"
+#include "tc_iot_device_logic.h"
 #include "tc_iot_export.h"
+
+#define HEAP_CHECK_TASK 0
+
+#define TASK_CYCLE 2000
+#define WIFI_SSID       "wifitest"       // type:string, your AP/router SSID to config your device networking
+#define WIFI_PASSWORD   "wifitest$-123456"       // type:string, your AP/router password
+
 
 void light_demo(void *pvParameter);
 

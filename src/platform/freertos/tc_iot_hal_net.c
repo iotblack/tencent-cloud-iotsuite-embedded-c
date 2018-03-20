@@ -23,6 +23,7 @@ int tc_iot_hal_net_read(tc_iot_network_t* n, unsigned char* buffer,
     timeout.tv_sec = 0;
     timeout.tv_usec = timeout_ms * 1000;
 
+    LOG_TRACE("before read, len=%d, timeout_ms=%d", len, timeout_ms);
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     if (select(n->net_context.fd + 1, &fdset, NULL, NULL, &timeout) > 0) {
         if (FD_ISSET(n->net_context.fd, &fdset)) {
@@ -30,10 +31,13 @@ int tc_iot_hal_net_read(tc_iot_network_t* n, unsigned char* buffer,
                 rc = recv(n->net_context.fd, buffer + recvLen, len - recvLen, MSG_DONTWAIT);
                 if (rc > 0) {
                     recvLen += rc;
+                    LOG_TRACE("read success: recvLen=%d, rc=%d", recvLen, rc);
                 } else if (rc < 0) {
                     recvLen = rc;
+                    LOG_TRACE("read failed: recvLen=%d, rc=%d", recvLen, rc);
                     break;
                 } else if (rc == 0) {
+                    LOG_TRACE("peer closed: recvLen=%d, rc=%d", recvLen, rc);
                     if (recvLen > 0) {
                         return recvLen;
                     } else {
@@ -45,11 +49,13 @@ int tc_iot_hal_net_read(tc_iot_network_t* n, unsigned char* buffer,
         }
     }
 
+
     if (recvLen == 0) {
         return TC_IOT_NET_NOTHING_READ;
     } else if (recvLen != len) {
         return TC_IOT_NET_READ_TIMEOUT;
     }
+    LOG_TRACE("recv result: recvLen=%d", recvLen);
     return recvLen;
 }
 
@@ -71,22 +77,31 @@ int tc_iot_hal_net_write(tc_iot_network_t* n, unsigned char* buffer,
     timeout.tv_sec = 0;
     timeout.tv_usec = timeout_ms * 1000;
 
+    LOG_TRACE("before send, len=%d, timeout_ms=%d, fd=%d", len, timeout_ms,n->net_context.fd);
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
-    do {
-        readysock = select(n->net_context.fd + 1, NULL, &fdset, NULL, &timeout);
-    } while (readysock <= 0);
+    /* do { */
+        /* LOG_TRACE("selecting readysock"); */
+        /* readysock = select(n->net_context.fd + 1, NULL, &fdset, NULL, &timeout); */
+        /* LOG_TRACE("readysock = %d", readysock); */
+    /* } while (readysock <= 0); */
     if (FD_ISSET(n->net_context.fd, &fdset)) {
         do {
+            LOG_TRACE("send : sentLen=%d, len=%d, rc=%d", sentLen, len, rc);
             rc = send(n->net_context.fd, buffer + sentLen, len - sentLen, MSG_DONTWAIT);
             if (rc > 0) {
                 sentLen += rc;
+                LOG_TRACE("sent success: sentLen=%d, rc=%d", sentLen, rc);
             } else if (rc < 0) {
                 sentLen = rc;
+                LOG_TRACE("sent failed: sentLen=%d, rc=%d", sentLen, rc);
                 break;
+            } else {
+                LOG_TRACE("sent zero: sentLen=%d, rc=%d", sentLen, rc);
             }
         } while (sentLen < len && xTaskCheckForTimeOut(&xTimeOut, &xTicksToWait) == pdFALSE);
     }
 
+    LOG_TRACE("sent result: sentLen=%d", sentLen);
     return sentLen;
 }
 
