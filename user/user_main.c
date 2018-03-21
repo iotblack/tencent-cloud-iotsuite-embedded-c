@@ -32,12 +32,13 @@
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
 #include "tc_iot_export.h"
+/* #include "tm1638.h" */
 
-#define HEAP_CHECK_TASK 0
+#define HEAP_CHECK_TASK 1
 
 #define TASK_CYCLE 2000
 #define WIFI_SSID       "wifitest"       // type:string, your AP/router SSID to config your device networking
-#define WIFI_PASSWORD   "wifitest$-123456"       // type:string, your AP/router password
+#define WIFI_PASSWORD   "wifitest12345"       // type:string, your AP/router password
 
 
 void light_demo(void *pvParameter);
@@ -138,7 +139,7 @@ void event_handler(System_Event_t *event)
         tc_iot_hal_printf("WiFi connected\n");
         sntpfn();
         got_ip_flag = 1;
-        xTaskCreate(light_demo, "light_demo", 2048, NULL, 5, NULL);
+        xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, NULL);
         tc_iot_hal_printf("\nMQTT task started...\n");
         break;
 
@@ -197,6 +198,7 @@ void user_init(void)
     xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL);
 #endif
 
+    /* xTaskCreate(led_task, "led_task", 128, NULL, 5, NULL); */
 }
 
 

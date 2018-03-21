@@ -1,15 +1,7 @@
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
+#include "gpio.h"
 #include "tc_iot_export.h"
-
-
-/* anis color control codes */
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-#define ANSI_COLOR_256_FORMAT   "\x1b[38;5;%dm"
 
 #define TC_IOT_TROUBLE_SHOOTING_URL "https://git.io/vN9le"
 
@@ -25,59 +17,54 @@ static volatile int stop = 0;
 void operate_device(tc_iot_shadow_local_data * light) {
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
+    int i = 0;
     int color = light->color % 3;
-    const char * ansi_color = NULL;
     const char * ansi_color_name = NULL;
-    static const char * brightness_bar      = "||||||||||||||||||||";
-    static const char * brightness_bar_left = "--------------------";
+    char brightness_bar[]      = "||||||||||||||||||||";
     int brightness_bar_len = strlen(brightness_bar);
     int brightness_bar_left_len = 0;
 
     switch(light->color) {
         case TC_IOT_PROP_color_red:
-            ansi_color = ANSI_COLOR_RED;
             ansi_color_name = "RED";
             break;
         case TC_IOT_PROP_color_green:
-            ansi_color = ANSI_COLOR_GREEN;
             ansi_color_name = "GREEN";
             break;
         case TC_IOT_PROP_color_blue:
-            ansi_color = ANSI_COLOR_BLUE;
             ansi_color_name = "BLUE";
             break;
         default:
-            ansi_color = ANSI_COLOR_YELLOW;
             ansi_color_name = "UNKNOWN";
             break;
     }
 
     /* 灯光亮度显示条 */
     brightness_bar_len = light->brightness >= 100?brightness_bar_len:(int)((light->brightness * brightness_bar_len)/100);
-    brightness_bar_left_len = strlen(brightness_bar) - brightness_bar_len;
+    for (i = brightness_bar_len; i < strlen(brightness_bar); i++ ){
+        if (brightness_bar[i] == '\0') {
+            break;
+        }
+        brightness_bar[i] = '-';
+    }
 
     if (light->device_switch) {
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(2), 0);
         /* 灯光开启式，按照控制参数展示 */
-        tc_iot_hal_printf( "%s%04d-%02d-%02d %02d:%02d:%02d " ANSI_COLOR_RESET, 
-                ansi_color,
-                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        tc_iot_hal_printf( "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         tc_iot_hal_printf(
-                "%s[  lighting  ]|[color:%s]|[brightness:%.*s%.*s]\n" 
-                ANSI_COLOR_RESET, 
-                ansi_color,
+                "[  lighting  ]|[color:%s]|[brightness:%s]\n", 
                 ansi_color_name,
-                brightness_bar_len, brightness_bar,
-                brightness_bar_left_len,brightness_bar_left
+                brightness_bar
                 );
     } else {
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(2), 1);
         /* 灯处于关闭状态时的展示 */
-        tc_iot_hal_printf( ANSI_COLOR_YELLOW "%04d-%02d-%02d %02d:%02d:%02d " ANSI_COLOR_RESET, 
-                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        tc_iot_hal_printf( "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         tc_iot_hal_printf(
-                ANSI_COLOR_YELLOW "[" "light is off" "]|[color:%s]|[brightness:%.*s%.*s]\n" ANSI_COLOR_RESET , 
+                "[  light off ]|[color:%s]|[brightness:%s]\n", 
                 ansi_color_name,
-                brightness_bar_len, brightness_bar,
-                brightness_bar_left_len, brightness_bar_left
+                brightness_bar
                 );
     }
 }
@@ -134,7 +121,7 @@ void light_demo(void *pvParameter) {
     }
 
     while (!stop) {
-        tc_iot_server_loop(200);
+        tc_iot_server_loop(2000);
     }
 
 exit:

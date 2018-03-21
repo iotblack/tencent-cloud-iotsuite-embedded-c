@@ -10,13 +10,13 @@ int tc_iot_hal_tls_read(tc_iot_network_t* network, unsigned char* buffer,
     return TC_IOT_FUCTION_NOT_IMPLEMENTED;
 }
 
-int tc_iot_hal_tls_write(tc_iot_network_t* network, unsigned char* buffer,
+int tc_iot_hal_tls_write(tc_iot_network_t* network, const unsigned char* buffer,
                          int len, int timeout_ms) {
     LOG_ERROR("not implemented");  
     return TC_IOT_FUCTION_NOT_IMPLEMENTED;
 }
 
-int tc_iot_hal_tls_connect(tc_iot_network_t* network, char* host,
+int tc_iot_hal_tls_connect(tc_iot_network_t* network, const char* host,
                            uint16_t port) {
     LOG_ERROR("not implemented");  
     return TC_IOT_FUCTION_NOT_IMPLEMENTED;

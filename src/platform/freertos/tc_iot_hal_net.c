@@ -59,7 +59,7 @@ int tc_iot_hal_net_read(tc_iot_network_t* n, unsigned char* buffer,
     return recvLen;
 }
 
-int tc_iot_hal_net_write(tc_iot_network_t* n, unsigned char* buffer,
+int tc_iot_hal_net_write(tc_iot_network_t* n, const unsigned char* buffer,
                          int len, int timeout_ms) {
     portTickType xTicksToWait = timeout_ms / portTICK_RATE_MS; /* convert milliseconds to ticks */
     xTimeOutType xTimeOut;
@@ -82,8 +82,13 @@ int tc_iot_hal_net_write(tc_iot_network_t* n, unsigned char* buffer,
     /* do { */
         /* LOG_TRACE("selecting readysock"); */
         /* readysock = select(n->net_context.fd + 1, NULL, &fdset, NULL, &timeout); */
-        /* LOG_TRACE("readysock = %d", readysock); */
-    /* } while (readysock <= 0); */
+        /* if (readysock == 0) { */
+            /* LOG_TRACE("timeout no sock ready, but try send data."); */
+            /* [> return TC_IOT_SEND_PACK_FAILED; <] */
+        /* } else { */
+            /* LOG_TRACE("readysock = %d", readysock); */
+        /* } */
+    /* } while (readysock < 0); */
     if (FD_ISSET(n->net_context.fd, &fdset)) {
         do {
             LOG_TRACE("send : sentLen=%d, len=%d, rc=%d", sentLen, len, rc);
@@ -105,14 +110,14 @@ int tc_iot_hal_net_write(tc_iot_network_t* n, unsigned char* buffer,
     return sentLen;
 }
 
-int tc_iot_hal_net_connect(tc_iot_network_t* n, char* host,
+int tc_iot_hal_net_connect(tc_iot_network_t* n, const char* host,
                            uint16_t port) {
     struct sockaddr_in sAddr;
     int retVal = -1;
     struct hostent *ipAddress;
 
     if (host) {
-        n->net_context.host = host;
+        n->net_context.host = (char *)host;
     }
 
     if (port) {
