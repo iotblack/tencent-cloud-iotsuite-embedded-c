@@ -32,7 +32,7 @@
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
 #include "tc_iot_export.h"
-/* #include "tm1638.h" */
+#include "tm1638.h"
 
 #define HEAP_CHECK_TASK 1
 
@@ -198,7 +198,7 @@ void user_init(void)
     xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL);
 #endif
 
-    /* xTaskCreate(led_task, "led_task", 128, NULL, 5, NULL); */
+    /*xTaskCreate(led_task, "led_task", 128, NULL, 5, NULL);*/
 }
 
 

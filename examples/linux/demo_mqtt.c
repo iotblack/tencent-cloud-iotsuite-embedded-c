@@ -30,9 +30,17 @@ tc_iot_mqtt_client_config g_client_config = {
 char sub_topic[TC_IOT_MAX_MQTT_TOPIC_LEN+1] = TC_IOT_SUB_TOPIC_DEF;
 char pub_topic[TC_IOT_MAX_MQTT_TOPIC_LEN+1] = TC_IOT_PUB_TOPIC_DEF;
 
+const char* tc_iot_hal_get_device_name(char *device_name, size_t len)
+{
+    strncpy(device_name, TC_IOT_CONFIG_DEVICE_NAME, len);
+    return device_name ; 
+}
+
 int main(int argc, char** argv) {
     int ret = 0;
     bool token_defined;
+    bool secrect_defined;
+
     tc_iot_mqtt_client_config * p_client_config;
     long timestamp = tc_iot_hal_timestamp(NULL);
     tc_iot_hal_srandom(timestamp);
@@ -42,11 +50,41 @@ int main(int argc, char** argv) {
     parse_command(p_client_config, argc, argv);
 
     token_defined = strlen(p_client_config->device_info.username) && strlen(p_client_config->device_info.password);
+    secrect_defined = (strlen(p_client_config->device_info.secret)>2);
+    
+    if (!secrect_defined)
+    {
+        //try to load device decrect from local storage
+        tc_iot_hal_get_value("device_secrect", p_client_config->device_info.secret,  sizeof(p_client_config->device_info.secret));
+        secrect_defined = (strlen(p_client_config->device_info.secret)>2) ;
+    }
+
+    tc_iot_hal_printf("p_client_config->device_info.secret %s %d\n", p_client_config->device_info.secret, TC_IOT_CONFIG_USE_TLS);
 
     if (!token_defined) {
+        //走 http token 方式来连接 mqtt
+        if (!secrect_defined)
+        {
+            //假如没有 secrect 那么要走激活流程来获取 device_secrect
+            tc_iot_hal_printf("requesting device_secrect for http token api\n");
+            ret = http_get_device_secret(
+                TC_IOT_CONFIG_ACTIVE_API_URL_DEBUG, TC_IOT_CONFIG_ROOT_CA,
+                timestamp, nonce, //1521444038, 398983339, //
+                &p_client_config->device_info);
+            
+            if (ret == TC_IOT_SUCCESS)
+            {
+                tc_iot_hal_set_value("device_secrect", p_client_config->device_info.secret );
+                tc_iot_hal_printf("save device_secrect %s\n", p_client_config->device_info.secret);
+            }
+
+            //return 0;
+
+        }
         tc_iot_hal_printf("requesting username and password for mqtt.\n");
         ret = http_refresh_auth_token(
-                TC_IOT_CONFIG_AUTH_API_URL, TC_IOT_CONFIG_ROOT_CA,
+                TC_IOT_CONFIG_AUTH_API_URL_DEBUG, //TC_IOT_CONFIG_AUTH_API_URL, 
+                TC_IOT_CONFIG_ROOT_CA,
                 timestamp, nonce,
                 &p_client_config->device_info);
         if (ret != TC_IOT_SUCCESS) {
@@ -58,9 +96,9 @@ int main(int argc, char** argv) {
         tc_iot_hal_printf("username & password using: %s %s\n", p_client_config->device_info.username, p_client_config->device_info.password);
     }
 
-    snprintf(sub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SUB_TOPIC_FMT, 
+    snprintf(sub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SUB_TOPIC_FMT,
             p_client_config->device_info.product_id,p_client_config->device_info.device_name);
-    snprintf(pub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_PUB_TOPIC_FMT, 
+    snprintf(pub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_PUB_TOPIC_FMT,
             p_client_config->device_info.product_id,p_client_config->device_info.device_name);
 
     tc_iot_hal_printf("sub topic: %s\n", sub_topic);
@@ -70,7 +108,7 @@ int main(int argc, char** argv) {
 
 void _on_message_received(tc_iot_message_data* md) {
     tc_iot_mqtt_message* message = md->message;
-    tc_iot_hal_printf("[s->c] %.*s\n", (int)message->payloadlen, (char*)message->payload);
+    tc_iot_hal_printf("[s->c] %s\n", (char*)message->payload);
 }
 
 static volatile int stop = 0;
@@ -101,6 +139,8 @@ int run_mqtt(tc_iot_mqtt_client_config* p_client_config) {
 
     tc_iot_mqtt_client client;
     tc_iot_mqtt_client* p_client = &client;
+    tc_iot_hal_printf("conn parms: host %s:%d cid %s user %s pass %s\n", p_client_config->host, p_client_config->port, 
+        p_client_config->device_info.client_id,  p_client_config->device_info.username,  p_client_config->device_info.password );
     ret = tc_iot_mqtt_client_construct(p_client, p_client_config);
     if (ret != TC_IOT_SUCCESS) {
         tc_iot_hal_printf("connect MQTT server failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);

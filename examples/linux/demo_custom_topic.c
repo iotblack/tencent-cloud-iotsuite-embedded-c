@@ -39,6 +39,7 @@ char sub_topic[TC_IOT_MAX_MQTT_TOPIC_LEN+1] = TC_IOT_SUB_TOPIC_DEF;
 char pub_topic[TC_IOT_MAX_MQTT_TOPIC_LEN+1] = TC_IOT_PUB_TOPIC_DEF;
 
 int main(int argc, char** argv) {
+    int ret = 0;
     tc_iot_mqtt_client_config * p_client_config;
 
     p_client_config = &(g_client_config);
@@ -63,7 +64,7 @@ int main(int argc, char** argv) {
 
 void _on_message_received(tc_iot_message_data* md) {
     tc_iot_mqtt_message* message = md->message;
-    tc_iot_hal_printf("[s->c] %.*s\n", (int)message->payloadlen, (char*)message->payload);
+    tc_iot_hal_printf("[s->c] %s\n", (char*)message->payload);
 }
 
 void _refresh_token() {
@@ -100,7 +101,7 @@ void my_disconnect_handler(tc_iot_mqtt_client* c, void* ctx) {
 
 void my_default_msg_handler(tc_iot_message_data * md) {
     tc_iot_mqtt_message* message = md->message;
-    tc_iot_hal_printf("UNHANDLED [s->c] %.*s\n", (int)message->payloadlen, (char*)message->payload);
+    tc_iot_hal_printf("UNHANDLED [s->c] %s\n", (char*)message->payload);
 }
 
 
@@ -173,6 +174,5 @@ int run_mqtt(tc_iot_mqtt_client_config* p_client_config) {
     }
 
     tc_iot_mqtt_client_disconnect(p_client);
-    return 0;
 }
 

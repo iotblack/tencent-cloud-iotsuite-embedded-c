@@ -6,9 +6,9 @@ void operate_device(tc_iot_shadow_local_data * device);
 
 /* 设备本地数据类型及地址、回调函数等相关定义 */
 tc_iot_shadow_property_def g_device_property_defs[] = {
-    DECLARE_PROPERTY_DEF(device_switch, TC_IOT_SHADOW_TYPE_BOOL, _tc_iot_shadow_property_control_callback),
-    DECLARE_PROPERTY_DEF(color, TC_IOT_SHADOW_TYPE_ENUM, _tc_iot_shadow_property_control_callback),
-    DECLARE_PROPERTY_DEF(brightness, TC_IOT_SHADOW_TYPE_NUMBER, _tc_iot_shadow_property_control_callback),
+    DECLARE_PROPERTY_DEF(device_switch, TC_IOT_SHADOW_TYPE_BOOL),
+    DECLARE_PROPERTY_DEF(color, TC_IOT_SHADOW_TYPE_ENUM),
+    DECLARE_PROPERTY_DEF(brightness, TC_IOT_SHADOW_TYPE_NUMBER),
 };
 
 /* 设备初始配置 */
@@ -43,6 +43,7 @@ tc_iot_shadow_config g_client_config = {
     tc_iot_device_on_message_received,
     TC_IOT_PROP_TOTAL,
     &g_device_property_defs[0],
+    _tc_iot_shadow_property_control_callback,
 };
 
 
