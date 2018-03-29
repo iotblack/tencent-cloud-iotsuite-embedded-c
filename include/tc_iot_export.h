@@ -34,7 +34,7 @@ char tc_iot_log_level_enabled(tc_iot_log_level_e log_level);
  * @param p_mqtt_client MQTT client 对象，出参。
  * @param p_client_config 用来初始化 MQTT Client 对象的配置信息, 入参。
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_construct(tc_iot_mqtt_client* p_mqtt_client,
@@ -67,7 +67,7 @@ char tc_iot_mqtt_client_is_connected(tc_iot_mqtt_client* p_mqtt_client);
  * @param p_mqtt_client MQTT client 对象
  * @param timeout_ms 等待时延，单位毫秒
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_yield(tc_iot_mqtt_client* p_mqtt_client, int timeout_ms);
@@ -80,7 +80,7 @@ int tc_iot_mqtt_client_yield(tc_iot_mqtt_client* p_mqtt_client, int timeout_ms);
  * @param topic Topic 名称
  * @param msg 待发送消息
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_publish(tc_iot_mqtt_client* p_mqtt_client,
@@ -92,11 +92,11 @@ int tc_iot_mqtt_client_publish(tc_iot_mqtt_client* p_mqtt_client,
  *
  * @param p_mqtt_client MQTT client 对象
  * @param topic_filter 待订阅 Topic 名称
- * @param qos 本次订阅的 QOS 等级 
+ * @param qos 本次订阅的 QOS 等级
  * @param msg_handler 订阅消息回调
  * @param context 订阅响应回调 context
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_subscribe(tc_iot_mqtt_client* p_mqtt_client,
@@ -111,7 +111,7 @@ int tc_iot_mqtt_client_subscribe(tc_iot_mqtt_client* p_mqtt_client,
  * @param p_mqtt_client MQTT client 对象
  * @param topic_filter 待取消订阅 Topic 名称
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_unsubscribe(tc_iot_mqtt_client* p_mqtt_client,
@@ -123,7 +123,7 @@ int tc_iot_mqtt_client_unsubscribe(tc_iot_mqtt_client* p_mqtt_client,
  *
  * @param p_mqtt_client MQTT client 对象
  *
- * @return 结果返回码 
+ * @return 结果返回码
  * @see tc_iot_sys_code_e
  */
 int tc_iot_mqtt_client_disconnect(tc_iot_mqtt_client* p_mqtt_client);
@@ -131,97 +131,60 @@ int tc_iot_mqtt_client_disconnect(tc_iot_mqtt_client* p_mqtt_client);
 /**
  *  @brief tc_iot_server_init
  * 根据设备配置参数，初始化服务。
+ *  @param  p_shadow_client 设备服务对象
  *  @param  p_client_config 服务配置参数。
  *  @return 结果返回码
  *  @see tc_iot_sys_code_e
  */
-int tc_iot_server_init(tc_iot_shadow_config * p_client_config);
+int tc_iot_server_init(tc_iot_shadow_client* p_shadow_client, tc_iot_shadow_config * p_client_config);
 
 
 /**
  *  @brief tc_iot_server_loop
  *  服务任务主循环函数，接收服务推送及响应数据。
+ *  @param  p_shadow_client 设备服务对象
  *  @param yield_timeout 循环等待时间，单位毫秒
  *  @return 结果返回码
  *  @see tc_iot_sys_code_e
  */
 
-int tc_iot_server_loop(int yield_timeout);
+int tc_iot_server_loop(tc_iot_shadow_client* p_shadow_client, int yield_timeout);
 
 /**
  *  @brief tc_iot_server_destroy
  * 数据点服务析构处理，释放资源。
+ *  @param  p_shadow_client 设备影子对象
  *  @return 结果返回码
  *  @see tc_iot_sys_code_e
  */
 
-int tc_iot_server_destroy(void);
+int tc_iot_server_destroy(tc_iot_shadow_client* p_shadow_client);
 
 
 
 /**
- *  @brief tc_iot_report_propeties
+ *  @brief tc_iot_report_device_data
 
     @par
-    上报设备数据点参数最新数据状态，更新到服务端。
+    检查本地变量数据和服务端差异，上报设备数据点参数最新数据状态，更新到服务端。
 
-    @par
-    例如，设备定义了 switch、color、brightness，三个参数，上报调用如下：
-    @code{.c}
-    tc_iot_report_propeties(3, TC_IOT_PROP_switch, &switch, TC_IOT_PROP_color, &color, TC_IOT_PROP_brightness, &brightness);
-    @endcode
-
-    @par
-    只上报 switch 状态：
-    @code{.c}
-    tc_iot_report_propeties(1, TC_IOT_PROP_switch, &switch);
-    @endcode
-
-    @par
-    上报 color 和 brightnes 状态：
-    @code{.c}
-    tc_iot_report_propeties(2, TC_IOT_PROP_color, &color, TC_IOT_PROP_brightness, &brightness);
-    @endcode
-
- *  @param property_count 上报数据点数
- *  @param va_list 可变参数列表，根据实际上报情况指定，格式为 proprty_id1,value1_address, proprty_id2,value2_address,  ...
- * 按照 参数编号&参数地址 成对方式，依次指定，property_count 的值为 property_id1 ~ property_idN 的总key数。
- *  @return 结果返回码 
+ *  @param  p_shadow_client 设备影子对象
+ *  @return 结果返回码
  *  @see tc_iot_sys_code_e
  */
-int tc_iot_report_propeties(int property_count, ...);
+int tc_iot_report_device_data(tc_iot_shadow_client* p_shadow_client);
 
 /**
- *  @brief tc_iot_set_control_propeties
+ *  @brief tc_iot_confirm_devcie_data
 
     @par
-    根据设备控制端要求，发送设备数据点参数控制指令，更新到服务端，推送给设备。
-
-    @par
-    例如，设备定义了 switch、color、brightness，三个参数，控制指令调用如下：
-    @code{.c}
-    tc_iot_set_control_propeties(3, TC_IOT_PROP_switch, &switch, TC_IOT_PROP_color, &color, TC_IOT_PROP_brightness, &brightness);
-    @endcode
-
-    @par
-    只上报 switch 状态：
-    @code{.c}
-    tc_iot_set_control_propeties(1, TC_IOT_PROP_switch, &switch);
-    @endcode
-
-    @par
-    上报 color 和 brightnes 状态：
-    @code{.c}
-    tc_iot_set_control_propeties(2, TC_IOT_PROP_color, &color, TC_IOT_PROP_brightness, &brightness);
-    @endcode
- *
- *  @param property_count 控制指令包含的数据点数
- *  @param va_list 可变参数列表，根据实际上报情况指定，格式为 proprty_id1,value1_address, proprty_id2,value2_address,  ...
- * 按照 参数编号&参数地址 成对方式，依次指定，property_count 的值为 property_id1 ~ property_idN 的总key数。
- *  @return 结果返回码 
+    确认服务端控制指令执行结果，如果服务端下发的 desired 指令执行成功，
+    则上报最新状态，并清空对应的 desired 指令。
+ *  @param  p_shadow_client 设备影子对象
+ *  @return 结果返回码
  *  @see tc_iot_sys_code_e
  */
-int tc_iot_set_control_propeties(int property_count, ...); 
+int tc_iot_confirm_devcie_data(tc_iot_shadow_client* p_shadow_client);
 
 /**
  *  @brief tc_iot_report_firm
@@ -234,12 +197,13 @@ int tc_iot_set_control_propeties(int property_count, ...);
  tc_iot_report_firm(3, "firm_version":"1.0.192", "sdk_version":"1.8", "harderwaer_ver":"gprs.v.1.0.2018092")
  @endcode
 
+ *  @param  p_shadow_client 设备影子对象
  *  @param info_count 固件信息数
  *  @param va_list 可变参数列表，根据实际上报情况指定，格式为 key1,value1,key2,value2, ...
  * 按照 key value 对方式，依次指定，info_count 的值为 key1 ~ keyN 的总key数。
- *  @return 结果返回码 
+ *  @return 结果返回码
  * @see tc_iot_sys_code_e
  */
-int tc_iot_report_firm(int info_count, ...);
+int tc_iot_report_firm(tc_iot_shadow_client* p_shadow_client, int info_count, ...);
 
 #endif /* end of include guard */
