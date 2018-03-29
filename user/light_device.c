@@ -136,24 +136,24 @@ start:
         tc_iot_hal_printf("username & password using: %s %s\n", p_client_config->device_info.username, p_client_config->device_info.password);
     }
 
-    ret = tc_iot_server_init(&g_tc_iot_shadow_config);
+    ret = tc_iot_server_init(tc_iot_get_shadow_client(), &g_tc_iot_shadow_config);
     if (ret != TC_IOT_SUCCESS) {
         tc_iot_hal_printf("tc_iot_server_init failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);
         goto exit ;
     }
 
     while (!stop) {
-        ret = tc_iot_server_loop(2000);
+        ret = tc_iot_server_loop(tc_iot_get_shadow_client(),2000);
         if (ret == TC_IOT_MQTT_RECONNECT_TIMEOUT) {
-            LOG_ERROR("reconnect timeout ret=%d, try restarting", ret);
+            TC_IOT_LOG_ERROR("reconnect timeout ret=%d, try restarting", ret);
             goto start;
         } else if ( ret != TC_IOT_SUCCESS) {
-            LOG_ERROR("ret=%d", ret);
+            TC_IOT_LOG_ERROR("ret=%d", ret);
         }
     }
 
 exit:
-    tc_iot_server_destroy();
+    tc_iot_server_destroy(tc_iot_get_shadow_client());
     vTaskDelete(NULL);
 }
 
