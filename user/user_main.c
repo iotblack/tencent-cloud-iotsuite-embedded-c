@@ -32,7 +32,7 @@
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
 #include "tc_iot_export.h"
-#include "tm1638.h"
+/*#include "tm1638.h"*/
 
 #define HEAP_CHECK_TASK 1
 
