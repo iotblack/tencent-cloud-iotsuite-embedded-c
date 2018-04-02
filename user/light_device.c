@@ -5,6 +5,32 @@
 
 #define TC_IOT_TROUBLE_SHOOTING_URL "https://git.io/vN9le"
 
+/*D1	IO, SCL	GPIO5*/
+/*D2	IO, SDA	GPIO4*/
+/*D3	IO, 10k Pull-up	GPIO0*/
+/*D4	IO, 10k Pull-up, BUILTIN_LED	GPIO2*/
+/*D5	IO, SCK	GPIO14*/
+/*D6	IO, MISO	GPIO12*/
+/*D7	IO, MOSI	GPIO13*/
+/*D8	IO, 10k Pull-down, SS	GPIO15*/
+
+#define DP_D1  5
+#define DP_D2  4
+#define DP_D3  0
+
+#define DP_D4  2
+#define DP_D5  14
+#define DP_D6  12
+#define DP_D7  13
+#define DP_D8  15
+
+#define DEVICE_PIN_LED_RED     DP_D1
+#define DEVICE_PIN_LED_GREEN   DP_D2
+#define DEVICE_PIN_LED_BLUE    DP_D3
+
+#define DEVICE_SWITCH_LED_ON    0
+#define DEVICE_SWITCH_LED_OFF   1
+
 extern tc_iot_shadow_config g_tc_iot_shadow_config;
 
 /* 循环退出标识 */
@@ -24,52 +50,42 @@ void operate_device(tc_iot_shadow_local_data * light) {
     char brightness_bar[]      = "||||||||||||||||||||";
     int brightness_bar_len = strlen(brightness_bar);
     int brightness_bar_left_len = 0;
-    int pinid = 2; /*4=blue, 0=green, 2=red*/
+    int pinid = DEVICE_PIN_LED_RED;
     int gpiolist[] = {};
 
     switch(light->color) {
         case TC_IOT_PROP_color_red:
             ansi_color_name = "RED";
-            pinid = 4;
+            pinid = DEVICE_PIN_LED_RED;
             break;
         case TC_IOT_PROP_color_green:
             ansi_color_name = "GREEN";
-            pinid = 0;
+            pinid = DEVICE_PIN_LED_GREEN;
             break;
         case TC_IOT_PROP_color_blue:
             ansi_color_name = "BLUE";
-            pinid = 2;
+            pinid = DEVICE_PIN_LED_BLUE;
             break;
         default:
             ansi_color_name = "UNKNOWN";
             break;
     }
 
-    /* 灯光亮度显示条 */
-    brightness_bar_len = light->brightness >= 100?brightness_bar_len:(int)((light->brightness * brightness_bar_len)/100);
-    for (i = brightness_bar_len; i < strlen(brightness_bar); i++ ){
-        if (brightness_bar[i] == '\0') {
-            break;
-        }
-        brightness_bar[i] = '-';
-    }
-
     if (light->device_switch) {
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(2),  0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(4),  0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(5),  0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(0),  0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(16), 0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(15), 0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(14), 0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(12), 0);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(13), 0);*/
 
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(2),  1);
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(0),  1);
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(4),  1);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED),   DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE),  DEVICE_SWITCH_LED_OFF);
 
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(pinid), 0);
+        if (pinid == DEVICE_PIN_LED_RED) {
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED), DEVICE_SWITCH_LED_ON);
+        } else if (pinid == DEVICE_PIN_LED_GREEN) {
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED), DEVICE_SWITCH_LED_ON);
+        } else if (pinid == DEVICE_PIN_LED_BLUE) {
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE), DEVICE_SWITCH_LED_ON);
+        } else {
+            TC_IOT_LOG_ERROR("pin=%d unkown", pinid);
+        }
 
         /* 灯光开启式，按照控制参数展示 */
         tc_iot_hal_printf( "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
@@ -79,15 +95,10 @@ void operate_device(tc_iot_shadow_local_data * light) {
                 brightness_bar
                 );
     } else {
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(2),  1);
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(0),  1);
-        GPIO_OUTPUT_SET(GPIO_ID_PIN(4),  1);
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(5),  1);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(16), 1);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(15), 1);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(14), 1);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(12), 1);*/
-        /*GPIO_OUTPUT_SET(GPIO_ID_PIN(13), 1);*/
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED),   DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE),  DEVICE_SWITCH_LED_OFF);
+
         /* 灯处于关闭状态时的展示 */
         tc_iot_hal_printf( "%04d-%02d-%02d %02d:%02d:%02d ", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         tc_iot_hal_printf(

@@ -31,6 +31,7 @@
 
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
+#include "gpio.h"
 #include "tc_iot_export.h"
 /*#include "tm1638.h"*/
 
@@ -44,6 +45,7 @@
 void light_demo(void *pvParameter);
 
 int got_ip_flag = 0;
+static xTaskHandle xHandleTaskLight = NULL;
 
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
@@ -139,13 +141,22 @@ void event_handler(System_Event_t *event)
         tc_iot_hal_printf("WiFi connected\n");
         sntpfn();
         got_ip_flag = 1;
-        xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, NULL);
-        tc_iot_hal_printf("\nMQTT task started...\n");
+        if (xHandleTaskLight == NULL) {
+            xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
+            tc_iot_hal_printf("\nMQTT task started...\n");
+        } else {
+            tc_iot_hal_printf("\nMQTT task already started...\n");
+        }
         break;
 
     case EVENT_STAMODE_DISCONNECTED:
         tc_iot_hal_printf("WiFi disconnected, try to connect...\n");
         got_ip_flag = 0;
+        if (xHandleTaskLight != NULL) {
+            vTaskDelete(xHandleTaskLight);
+            xHandleTaskLight = NULL;
+            tc_iot_hal_printf("\nMQTT task deleted...\n");
+        }
         wifi_station_connect();
         break;
 
@@ -174,7 +185,7 @@ void heap_check_task(void *para)
 {
     while (1) {
         vTaskDelay(TASK_CYCLE / portTICK_RATE_MS);
-        tc_iot_hal_printf("[heap check task] free heap size:%d\n", system_get_free_heap_size());
+        tc_iot_hal_printf("[heap check task] free heap size:%d,\n", system_get_free_heap_size());
     }
 }
 
@@ -195,10 +206,8 @@ void user_init(void)
     got_ip_flag = 0;
 
 #if HEAP_CHECK_TASK
-    xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL);
+    /* xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL); */
 #endif
-
-    /*xTaskCreate(led_task, "led_task", 128, NULL, 5, NULL);*/
 }
 
 
