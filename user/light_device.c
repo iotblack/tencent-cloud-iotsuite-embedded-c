@@ -80,7 +80,7 @@ void operate_device(tc_iot_shadow_local_data * light) {
         if (pinid == DEVICE_PIN_LED_RED) {
             GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED), DEVICE_SWITCH_LED_ON);
         } else if (pinid == DEVICE_PIN_LED_GREEN) {
-            GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED), DEVICE_SWITCH_LED_ON);
+            GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_ON);
         } else if (pinid == DEVICE_PIN_LED_BLUE) {
             GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE), DEVICE_SWITCH_LED_ON);
         } else {
