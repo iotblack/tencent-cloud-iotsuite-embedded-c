@@ -24,9 +24,9 @@
 
 /* #include "freertos/FreeRTOS.h" */
 /* #include "freertos/task.h" */
-/* #include "esp_common.h" */
+#include "esp_common.h"
 /* #include "esp_wifi.h" */
-/* #include "uart.h" */
+#include "uart.h"
 /* #include "apps/sntp.h" */
 
 #include "tc_iot_device_config.h"
@@ -34,6 +34,9 @@
 #include "gpio.h"
 #include "tc_iot_export.h"
 /*#include "tm1638.h"*/
+
+void user_uart_init_new(void);
+
 
 #define HEAP_CHECK_TASK 1
 
@@ -204,6 +207,8 @@ void user_init(void)
     initialize_wifi();
 
     got_ip_flag = 0;
+
+    user_uart_init_new();
 
 #if HEAP_CHECK_TASK
     /* xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL); */

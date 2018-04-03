@@ -87,6 +87,7 @@ LINKFLAGS_eagle.app.v6 = \
 	-lmbedtls               \
     -lopenssl               \
 	-ljson  \
+	-ldriver  \
 	-lsmartconfig \
 	-lspiffs	\
 	$(DEP_LIBS_eagle.app.v6)					\

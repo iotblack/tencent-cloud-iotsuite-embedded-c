@@ -27,7 +27,7 @@ echo "Erasing the flash first"
    0x7e000 "$FirmwareDir/bin/blank.bin"  \
    0x3fe000 "$FirmwareDir/bin/blank.bin"
  
-echo "Check the boot by typing: miniterm.py $port 74800"
+echo "Check the boot by typing: miniterm.py $port 74880"
 echo " and then resetting.  Use Ctrl-] to quit miniterm,"
 
 
