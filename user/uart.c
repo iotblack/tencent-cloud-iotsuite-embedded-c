@@ -29,6 +29,7 @@
 #include "freertos/queue.h"
 
 #include "uart.h"
+extern void initialize_wifi(void) ;
 
 enum {
     UART_EVENT_RX_CHAR,
@@ -345,6 +346,7 @@ UART_IntrConfig(UART_Port uart_no,  UART_IntrConfTypeDef *pUARTIntrConf)
 }
 
 char command_buffer[1024];
+void command_callback(char * buffer);
 
 LOCAL void
 uart0_rx_intr_handler(void *para)
@@ -369,10 +371,34 @@ uart0_rx_intr_handler(void *para)
             printf("full\r\n");
             fifo_len = (READ_PERI_REG(UART_STATUS(UART0)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT;
             buf_idx = 0;
-
+            pos = strlen(command_buffer);
             while (buf_idx < fifo_len) {
-                uart_tx_one_char(UART0, READ_PERI_REG(UART_FIFO(UART0)) & 0xFF);
+                RcvChar = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
+                uart_tx_one_char(UART0, RcvChar);
                 buf_idx++;
+
+                if (pos >= sizeof(command_buffer)) {
+                    printf("Buffer overflow\r\n");
+                    memset(command_buffer, 0, sizeof(command_buffer));
+                    pos = 0;
+                    continue;
+                }
+
+                if (RcvChar == '\n') {
+                    /* command_buffer[pos] = RcvChar; */
+                    /* pos++; */
+                    command_buffer[pos] = '\0';
+                    command_callback(command_buffer);
+                    memset(command_buffer, 0, sizeof(command_buffer));
+                    pos = 0;
+                    continue;
+                } else if (RcvChar == '\r') {
+                    /* skip return */
+                    continue;
+                } else {
+                    command_buffer[pos] = RcvChar;
+                    pos++;
+                }
             }
 
             WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
@@ -381,10 +407,33 @@ uart0_rx_intr_handler(void *para)
             fifo_len = (READ_PERI_REG(UART_STATUS(UART0)) >> UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT;
             buf_idx = 0;
             pos = strlen(command_buffer);
-
             while (buf_idx < fifo_len) {
-                uart_tx_one_char(UART0, READ_PERI_REG(UART_FIFO(UART0)) & 0xFF);
+                RcvChar = READ_PERI_REG(UART_FIFO(UART0)) & 0xFF;
+                uart_tx_one_char(UART0, RcvChar);
                 buf_idx++;
+
+                if (pos >= sizeof(command_buffer)) {
+                    printf("Buffer overflow\r\n");
+                    memset(command_buffer, 0, sizeof(command_buffer));
+                    pos = 0;
+                    continue;
+                }
+
+                if (RcvChar == '\n') {
+                    /* command_buffer[pos] = RcvChar; */
+                    /* pos++; */
+                    command_buffer[pos] = '\0';
+                    command_callback(command_buffer);
+                    memset(command_buffer, 0, sizeof(command_buffer));
+                    pos = 0;
+                    continue;
+                } else if (RcvChar == '\r') {
+                    /* skip return */
+                    continue;
+                } else {
+                    command_buffer[pos] = RcvChar;
+                    pos++;
+                }
             }
 
             WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_TOUT_INT_CLR);
@@ -423,7 +472,7 @@ void user_uart_init_new(void)
     UART_IntrConfig(UART0, &uart_intr);
 
     UART_SetPrintPort(UART0);
-    memset(command_buffer, 0 sizeof(command_buffer));
+    memset(command_buffer, 0, sizeof(command_buffer));
     UART_intr_handler_register(uart0_rx_intr_handler, NULL);
     ETS_UART_INTR_ENABLE();
 

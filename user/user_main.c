@@ -33,7 +33,10 @@
 #include "tc_iot_device_logic.h"
 #include "gpio.h"
 #include "tc_iot_export.h"
-/*#include "tm1638.h"*/
+
+#ifdef TM1638_TASK
+#include "TM1638.h"
+#endif
 
 void user_uart_init_new(void);
 
@@ -61,42 +64,42 @@ static xTaskHandle xHandleTaskLight = NULL;
  *                C : sdk parameters
  * Parameters   : none
  * Returns      : rf cal sector
-*******************************************************************************/
+ *******************************************************************************/
 uint32 user_rf_cal_sector_set(void)
 {
     flash_size_map size_map = system_get_flash_size_map();
     uint32 rf_cal_sec = 0;
 
     switch (size_map) {
-    case FLASH_SIZE_4M_MAP_256_256:
-        rf_cal_sec = 128 - 5;
-        break;
+        case FLASH_SIZE_4M_MAP_256_256:
+            rf_cal_sec = 128 - 5;
+            break;
 
-    case FLASH_SIZE_8M_MAP_512_512:
-        rf_cal_sec = 256 - 5;
-        break;
+        case FLASH_SIZE_8M_MAP_512_512:
+            rf_cal_sec = 256 - 5;
+            break;
 
-    case FLASH_SIZE_16M_MAP_512_512:
-    case FLASH_SIZE_16M_MAP_1024_1024:
-        rf_cal_sec = 512 - 5;
-        break;
+        case FLASH_SIZE_16M_MAP_512_512:
+        case FLASH_SIZE_16M_MAP_1024_1024:
+            rf_cal_sec = 512 - 5;
+            break;
 
-    case FLASH_SIZE_32M_MAP_512_512:
-    case FLASH_SIZE_32M_MAP_1024_1024:
-        rf_cal_sec = 1024 - 5;
-        break;
+        case FLASH_SIZE_32M_MAP_512_512:
+        case FLASH_SIZE_32M_MAP_1024_1024:
+            rf_cal_sec = 1024 - 5;
+            break;
 
-    case FLASH_SIZE_64M_MAP_1024_1024:
-        rf_cal_sec = 2048 - 5;
-        break;
+        case FLASH_SIZE_64M_MAP_1024_1024:
+            rf_cal_sec = 2048 - 5;
+            break;
 
-    case FLASH_SIZE_128M_MAP_1024_1024:
-        rf_cal_sec = 4096 - 5;
-        break;
+        case FLASH_SIZE_128M_MAP_1024_1024:
+            rf_cal_sec = 4096 - 5;
+            break;
 
-    default:
-        rf_cal_sec = 0;
-        break;
+        default:
+            rf_cal_sec = 0;
+            break;
     }
 
     return rf_cal_sec;
@@ -107,24 +110,25 @@ void sntpfn()
     tc_iot_hal_printf("Initializing SNTP\n");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
 
-// for set more sntp server, plz modify macro SNTP_MAX_SERVERS in sntp_opts.h file
+    // for set more sntp server, plz modify macro SNTP_MAX_SERVERS in sntp_opts.h file
     sntp_setservername(0, "202.112.29.82");        // set sntp server after got ip address, you had better to adjust the sntp server to your area
-   sntp_setservername(1, "time-a.nist.gov");
-//    sntp_setservername(2, "ntp.sjtu.edu.cn");
-//    sntp_setservername(3, "0.nettime.pool.ntp.org");
-//    sntp_setservername(4, "time-b.nist.gov");
-//    sntp_setservername(5, "time-a.timefreq.bldrdoc.gov");
-//    sntp_setservername(6, "time-b.timefreq.bldrdoc.gov");
-//    sntp_setservername(7, "time-c.timefreq.bldrdoc.gov");
-//    sntp_setservername(8, "utcnist.colorado.edu");
-//    sntp_setservername(9, "time.nist.gov");
+    sntp_setservername(1, "time-a.nist.gov");
+    /* sntp_setservername(2, "ntp.sjtu.edu.cn"); */
+    //    sntp_setservername(3, "0.nettime.pool.ntp.org");
+    //    sntp_setservername(4, "time-b.nist.gov");
+    //    sntp_setservername(5, "time-a.timefreq.bldrdoc.gov");
+    //    sntp_setservername(6, "time-b.timefreq.bldrdoc.gov");
+    //    sntp_setservername(7, "time-c.timefreq.bldrdoc.gov");
+    //    sntp_setservername(8, "utcnist.colorado.edu");
+    //    sntp_setservername(9, "time.nist.gov");
 
+    sntp_set_timezone(0);
     sntp_init();
 
     while (1) {
         u32_t ts = 0;
         ts = sntp_get_current_timestamp();
-        tc_iot_hal_printf("current time : %s\n", sntp_get_real_time(ts));
+        tc_iot_hal_printf("current time : ts=%d, %s\n", ts, sntp_get_real_time(ts));
 
         if (ts == 0) {
             tc_iot_hal_printf("did not get a valid time from sntp server\n");
@@ -140,31 +144,31 @@ void sntpfn()
 void event_handler(System_Event_t *event)
 {
     switch (event->event_id) {
-    case EVENT_STAMODE_GOT_IP:
-        tc_iot_hal_printf("WiFi connected\n");
-        sntpfn();
-        got_ip_flag = 1;
-        if (xHandleTaskLight == NULL) {
-            xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
-            tc_iot_hal_printf("\nMQTT task started...\n");
-        } else {
-            tc_iot_hal_printf("\nMQTT task already started...\n");
-        }
-        break;
+        case EVENT_STAMODE_GOT_IP:
+            tc_iot_hal_printf("WiFi connected\n");
+            sntpfn();
+            got_ip_flag = 1;
+            /* if (xHandleTaskLight == NULL) { */
+                /* xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight); */
+                /* tc_iot_hal_printf("\nMQTT task started...\n"); */
+            /* } else { */
+                /* tc_iot_hal_printf("\nMQTT task already started...\n"); */
+            /* } */
+            break;
 
-    case EVENT_STAMODE_DISCONNECTED:
-        tc_iot_hal_printf("WiFi disconnected, try to connect...\n");
-        got_ip_flag = 0;
-        if (xHandleTaskLight != NULL) {
-            vTaskDelete(xHandleTaskLight);
-            xHandleTaskLight = NULL;
-            tc_iot_hal_printf("\nMQTT task deleted...\n");
-        }
-        wifi_station_connect();
-        break;
+        case EVENT_STAMODE_DISCONNECTED:
+            tc_iot_hal_printf("WiFi disconnected\n");
+            got_ip_flag = 0;
+            /* if (xHandleTaskLight != NULL) { */
+                /* vTaskDelete(xHandleTaskLight); */
+                /* xHandleTaskLight = NULL; */
+                /* tc_iot_hal_printf("\nMQTT task deleted...\n"); */
+            /* } */
+            /* wifi_station_connect(); */
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
@@ -184,19 +188,63 @@ void initialize_wifi(void)
     wifi_set_event_handler_cb(event_handler);
 }
 
+void command_callback(char * buffer) {
+    const char * WIFI_COMMAND = "AT+WIFI";
+    const char * MQTT_COMMAND = "AT+MQTT";
+
+    if (0 == memcmp(buffer, WIFI_COMMAND, strlen(WIFI_COMMAND))) {
+        printf("doing:%s\n",buffer);
+        initialize_wifi();
+        wifi_station_connect();
+    } else if (0 == memcmp(buffer, MQTT_COMMAND, strlen(MQTT_COMMAND))) {
+        printf("doing:%s\n",buffer);
+        if (!got_ip_flag) {
+            printf("ERROR %s\n", "network not ready");
+            return;
+        }
+        if (xHandleTaskLight == NULL) {
+            xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
+            tc_iot_hal_printf("\nMQTT task started...\n");
+        } else {
+            tc_iot_hal_printf("\nMQTT task already started...\n");
+        }
+    } else {
+        printf("AT+COMMAND received:%s\n",buffer);
+    }
+    return;
+}
+
+
 void heap_check_task(void *para)
 {
     while (1) {
         vTaskDelay(TASK_CYCLE / portTICK_RATE_MS);
-        tc_iot_hal_printf("[heap check task] free heap size:%d,\n", system_get_free_heap_size());
+        tc_iot_hal_printf("[heap check task] free heap size:%d\n", system_get_free_heap_size());
     }
 }
+
+
+#ifdef TM1638_TASK
+void tm1638_task(void *para)
+{
+    TM_TM1638(4,14,5,true,7);
+    TM_setDisplayToHexNumber(0x1234ABCD, 0xF0);
+
+    while (1) {
+        vTaskDelay(TASK_CYCLE / portTICK_RATE_MS);
+        byte keys = TM_getButtons();
+        tc_iot_hal_printf("[tm1638] buttons:%d,\n", (int)keys);
+
+        TM_setLEDs(((keys & 0xF0) << 8) | (keys & 0xF));
+    }
+}
+#endif
 
 void user_init(void)
 {
     // default baudrate: 74880, change it if necessary
-//    UART_SetBaudrate(0, 115200);
-//    UART_SetBaudrate(1, 115200);
+    //    UART_SetBaudrate(0, 115200);
+    //    UART_SetBaudrate(1, 115200);
 
     extern unsigned int max_content_len;    // maxium fragment length in bytes, more info see as RFC 6066: part 4
     max_content_len = 4 * 1024;
@@ -204,11 +252,15 @@ void user_init(void)
     /* hal_micros_set_default_time();  // startup millisecond timer */
     tc_iot_hal_printf("SDK version:%s \n", system_get_sdk_version());
     tc_iot_hal_printf("\n******************************************  \n  SDK compile time:%s %s\n******************************************\n\n", __DATE__, __TIME__);
-    initialize_wifi();
+    /* initialize_wifi(); */
 
     got_ip_flag = 0;
 
     user_uart_init_new();
+
+#ifdef TM1638_TASK
+    xTaskCreate(tm1638_task, "tm1638_task", 128, NULL, 5, NULL);
+#endif
 
 #if HEAP_CHECK_TASK
     /* xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL); */

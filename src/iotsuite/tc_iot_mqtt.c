@@ -1011,6 +1011,7 @@ int tc_iot_mqtt_publish(tc_iot_mqtt_client* c, const char* topicName,
         message->id = _get_next_pack_id(c);
     }
 
+    tc_iot_hal_printf("[heap check task] $$free heap size:%d,\n", system_get_free_heap_size());
     len = MQTTSerialize_publish(
         c->buf, c->buf_size, 0, message->qos, message->retained, message->id,
         topic, (unsigned char*)message->payload, message->payloadlen);
