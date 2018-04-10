@@ -116,10 +116,13 @@ void light_demo(void *pvParameter) {
     long timestamp = 0;
     long nonce = 0; 
 
+        tc_iot_hal_printf("starting mqtt.\n");
 start:
     p_client_config = &(g_tc_iot_shadow_config.mqtt_client_config);
+    tc_iot_hal_printf("get timestamp\n");
     timestamp = tc_iot_hal_timestamp(NULL);
     tc_iot_hal_srandom(timestamp);
+    tc_iot_hal_printf("get random\n");
     nonce = tc_iot_hal_random();
 
     /* 根据 product id 和device name 定义，生成发布和订阅的 Topic 名称。 */

@@ -12,7 +12,7 @@ fi
 if [ ! -c $port ]; then
    echo "No device appears to be plugged in.  Stopping."
 fi
-printf "Writing AT firmware to the Wemos D1 Mini in 3..."
+printf "Writing AT firmware to the ESP8266 board in 3..."
 sleep 1; printf "2..."
 sleep 1; printf "1..."
 sleep 1; echo "done."

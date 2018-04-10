@@ -25,21 +25,11 @@
 /* #include "freertos/FreeRTOS.h" */
 /* #include "freertos/task.h" */
 #include "esp_common.h"
-/* #include "esp_wifi.h" */
-#include "uart.h"
-/* #include "apps/sntp.h" */
 
 #include "tc_iot_device_config.h"
 #include "tc_iot_device_logic.h"
 #include "gpio.h"
 #include "tc_iot_export.h"
-
-#ifdef TM1638_TASK
-#include "TM1638.h"
-#endif
-
-void user_uart_init_new(void);
-
 
 #define HEAP_CHECK_TASK 1
 
@@ -49,6 +39,9 @@ void user_uart_init_new(void);
 
 
 void light_demo(void *pvParameter);
+void event_handler(System_Event_t *event);
+
+void user_uart_init_new(void);
 
 int got_ip_flag = 0;
 static xTaskHandle xHandleTaskLight = NULL;
@@ -128,47 +121,15 @@ void sntpfn()
     while (1) {
         u32_t ts = 0;
         ts = sntp_get_current_timestamp();
-        tc_iot_hal_printf("current time : ts=%d, %s\n", ts, sntp_get_real_time(ts));
 
         if (ts == 0) {
-            tc_iot_hal_printf("did not get a valid time from sntp server\n");
+            /* tc_iot_hal_printf("did not get a valid time from sntp server\n"); */
         } else {
+            tc_iot_hal_printf("current time : ts=%d, %s\n", ts, sntp_get_real_time(ts));
             break;
         }
 
         vTaskDelay(TASK_CYCLE / portTICK_RATE_MS);
-    }
-}
-
-// WiFi callback function
-void event_handler(System_Event_t *event)
-{
-    switch (event->event_id) {
-        case EVENT_STAMODE_GOT_IP:
-            tc_iot_hal_printf("WiFi connected\n");
-            sntpfn();
-            got_ip_flag = 1;
-            /* if (xHandleTaskLight == NULL) { */
-                /* xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight); */
-                /* tc_iot_hal_printf("\nMQTT task started...\n"); */
-            /* } else { */
-                /* tc_iot_hal_printf("\nMQTT task already started...\n"); */
-            /* } */
-            break;
-
-        case EVENT_STAMODE_DISCONNECTED:
-            tc_iot_hal_printf("WiFi disconnected\n");
-            got_ip_flag = 0;
-            /* if (xHandleTaskLight != NULL) { */
-                /* vTaskDelete(xHandleTaskLight); */
-                /* xHandleTaskLight = NULL; */
-                /* tc_iot_hal_printf("\nMQTT task deleted...\n"); */
-            /* } */
-            /* wifi_station_connect(); */
-            break;
-
-        default:
-            break;
     }
 }
 
@@ -194,7 +155,19 @@ void command_callback(char * buffer) {
 
     if (0 == memcmp(buffer, WIFI_COMMAND, strlen(WIFI_COMMAND))) {
         printf("doing:%s\n",buffer);
-        initialize_wifi();
+        wifi_set_opmode(STATION_MODE);
+
+        // set AP parameter
+        struct station_config config;
+        bzero(&config, sizeof(struct station_config));
+        sprintf(config.ssid, "wifitest");
+        sprintf(config.password, "wifitest12345");
+        wifi_station_set_config(&config);
+
+        wifi_station_set_auto_connect(true);
+        wifi_station_set_reconnect_policy(true);
+        wifi_set_event_handler_cb(event_handler);
+
         wifi_station_connect();
     } else if (0 == memcmp(buffer, MQTT_COMMAND, strlen(MQTT_COMMAND))) {
         printf("doing:%s\n",buffer);
@@ -214,6 +187,38 @@ void command_callback(char * buffer) {
     return;
 }
 
+// WiFi callback function
+void event_handler(System_Event_t *event)
+{
+    switch (event->event_id) {
+        case EVENT_STAMODE_GOT_IP:
+            tc_iot_hal_printf("WiFi connected\n");
+            sntpfn();
+            got_ip_flag = 1;
+            if (xHandleTaskLight == NULL) {
+                xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
+                tc_iot_hal_printf("\nMQTT task started...\n");
+            } else {
+                tc_iot_hal_printf("\nMQTT task already started...\n");
+            }
+            break;
+
+        case EVENT_STAMODE_DISCONNECTED:
+            tc_iot_hal_printf("WiFi disconnected\n");
+            got_ip_flag = 0;
+            if (xHandleTaskLight != NULL) {
+                vTaskDelete(xHandleTaskLight);
+                xHandleTaskLight = NULL;
+                tc_iot_hal_printf("\nMQTT task deleted...\n");
+            }
+            wifi_station_connect();
+            break;
+
+        default:
+            break;
+    }
+}
+
 
 void heap_check_task(void *para)
 {
@@ -222,23 +227,6 @@ void heap_check_task(void *para)
         tc_iot_hal_printf("[heap check task] free heap size:%d\n", system_get_free_heap_size());
     }
 }
-
-
-#ifdef TM1638_TASK
-void tm1638_task(void *para)
-{
-    TM_TM1638(4,14,5,true,7);
-    TM_setDisplayToHexNumber(0x1234ABCD, 0xF0);
-
-    while (1) {
-        vTaskDelay(TASK_CYCLE / portTICK_RATE_MS);
-        byte keys = TM_getButtons();
-        tc_iot_hal_printf("[tm1638] buttons:%d,\n", (int)keys);
-
-        TM_setLEDs(((keys & 0xF0) << 8) | (keys & 0xF));
-    }
-}
-#endif
 
 void user_init(void)
 {
@@ -252,19 +240,19 @@ void user_init(void)
     /* hal_micros_set_default_time();  // startup millisecond timer */
     tc_iot_hal_printf("SDK version:%s \n", system_get_sdk_version());
     tc_iot_hal_printf("\n******************************************  \n  SDK compile time:%s %s\n******************************************\n\n", __DATE__, __TIME__);
-    /* initialize_wifi(); */
 
     got_ip_flag = 0;
+    initialize_wifi();
 
-    user_uart_init_new();
+    /* user_uart_init_new(); */
 
-#ifdef TM1638_TASK
-    xTaskCreate(tm1638_task, "tm1638_task", 128, NULL, 5, NULL);
-#endif
+	/* ssc_attach(SSC_BR_74880); */
+    /* ssc_register(sscCmdSet, SSC_CMD_N, iotsuite_at_help); */
 
 #if HEAP_CHECK_TASK
-    /* xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL); */
+    xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL);
 #endif
+    /* tc_iot_hal_printf("Ready\r\n"); */
 }
 
 

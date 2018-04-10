@@ -40,7 +40,7 @@ long tc_iot_hal_timestamp(void* zone) {
     return sntp_get_current_timestamp();
 }
 
-int tc_iot_hal_sleep_ms(long ms) { 
+int tc_iot_hal_sleep_ms(long ms) {
     if ((ms > 0) && (ms < portTICK_RATE_MS)) {
         ms = portTICK_RATE_MS;
     }
@@ -50,10 +50,10 @@ int tc_iot_hal_sleep_ms(long ms) {
 }
 
 long tc_iot_hal_random() {
-    return os_random();
+    return (unsigned int)os_random();
 }
 
-void tc_iot_hal_srandom(unsigned int seed) { 
+void tc_iot_hal_srandom(unsigned int seed) {
     srand(seed);
 }
 
