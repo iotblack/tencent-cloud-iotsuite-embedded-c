@@ -43,8 +43,8 @@ git clone -b dev --recursive https://github.com/iotblack/tencent-cloud-iotsuite-
 
 ```c
 // 配置为当前可连接的wifi网络信息
-#define WIFI_SSID       "wifitest"       // type:string, your AP/router SSID to config your device networking
-#define WIFI_PASSWORD   "wifitest12345"       // type:string, your AP/router password
+#define WIFI_SSID       "wifitest"
+#define WIFI_PASSWORD   "wifitest12345"
 ```
 
 
@@ -61,7 +61,7 @@ git clone -b dev --recursive https://github.com/iotblack/tencent-cloud-iotsuite-
 5. 参考 tools/light_controller.sh 发送控制指令。
 
 
-### 可选开发板：
+### 参考开发板：
 1. wemos d1 开发板： https://wiki.wemos.cc/products:d1:d1_mini
 2. RGB LED 连线方式：
 ```shell
