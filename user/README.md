@@ -70,5 +70,5 @@ G  -> D2
 B  -> D3
 正 -> 3V3
 ```
-
+![board](https://user-images.githubusercontent.com/990858/38666191-ef3eed8c-3e70-11e8-8b73-cf2ac324fd5b.jpg)
 
