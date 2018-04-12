@@ -109,12 +109,34 @@ void operate_device(tc_iot_shadow_local_data * light) {
     }
 }
 
+void test_light(void) {
+    int light_pins[] = {DEVICE_PIN_LED_RED,DEVICE_PIN_LED_GREEN,DEVICE_PIN_LED_BLUE};
+    int i = 0;
+    for(i = 0; i < 3; i++) {
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED),   DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_OFF);
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE),  DEVICE_SWITCH_LED_OFF);
+
+        GPIO_OUTPUT_SET(GPIO_ID_PIN(light_pins[i]), DEVICE_SWITCH_LED_ON);
+        tc_iot_hal_sleep_ms(1000);
+    }
+
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED), DEVICE_SWITCH_LED_ON);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_ON);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE), DEVICE_SWITCH_LED_ON);
+
+    tc_iot_hal_sleep_ms(1000);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_RED),   DEVICE_SWITCH_LED_OFF);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_GREEN), DEVICE_SWITCH_LED_OFF);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(DEVICE_PIN_LED_BLUE),  DEVICE_SWITCH_LED_OFF);
+}
+
 void light_demo(void *pvParameter) {
     tc_iot_mqtt_client_config * p_client_config;
     bool token_defined;
     int ret;
     long timestamp = 0;
-    long nonce = 0; 
+    long nonce = 0;
 
         tc_iot_hal_printf("starting mqtt.\n");
 start:
@@ -150,6 +172,7 @@ start:
         tc_iot_hal_printf("username & password using: %s %s\n", p_client_config->device_info.username, p_client_config->device_info.password);
     }
 
+    test_light();
     ret = tc_iot_server_init(tc_iot_get_shadow_client(), &g_tc_iot_shadow_config);
     if (ret != TC_IOT_SUCCESS) {
         tc_iot_hal_printf("tc_iot_server_init failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);
