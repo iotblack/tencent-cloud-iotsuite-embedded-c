@@ -2,7 +2,7 @@
 
 ### SDK 获取
 
-腾讯云 iotsuite C语言版 SDK的下载地址： [tencent-cloud-iotsuite-embedded-c.git](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c.git)
+移植测试分支： [tencent-cloud-iotsuite-embedded-c-esp8266-test](https://github.com/iotblack/tencent-cloud-iotsuite-embedded-c/tree/dev/user)
 
 ```shell
 git clone -b dev --recursive https://github.com/iotblack/tencent-cloud-iotsuite-embedded-c.git
