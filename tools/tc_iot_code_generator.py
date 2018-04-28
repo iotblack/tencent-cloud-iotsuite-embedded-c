@@ -12,9 +12,22 @@ sys.setdefaultencoding("utf-8")
 
 try: import simplejson as json
 except: import json
+class TEMPLATE_CONSTANTS:
+    TYPE = "type"
+    AUTH_TYPE = "auth_type"
+    NAME = "name"
+    RANGE = "range"
+    DATA_TEMPLATE = "data_template"
 
 class AttributeDict(dict):
-    __getattr__ = dict.__getitem__
+    def __getattr__(self, attr_name):
+        result = self.__getitem__(attr_name)
+        if result == None:
+            print(attr_name + " test")
+            pass
+        return result
+
+    #  __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
 
 class code_template:
@@ -39,10 +52,10 @@ class iot_field:
         self.enums = []
         self.index = index
         self.name = name
-        if "Type" not  in field_obj:
+        if TEMPLATE_CONSTANTS.TYPE not  in field_obj:
             raise ValueError("错误：{} 字段定义中未找到 Type 字段".format(name))
 
-        self.type_name = field_obj["Type"]
+        self.type_name = field_obj[TEMPLATE_CONSTANTS.TYPE]
 
         if self.type_name == "bool":
             self.type_id = "TC_IOT_SHADOW_TYPE_BOOL"
@@ -51,10 +64,10 @@ class iot_field:
         elif self.type_name == "enum":
             self.type_id = "TC_IOT_SHADOW_TYPE_ENUM"
             self.type_define = "tc_iot_shadow_enum"
-            if "Range" not in field_obj:
+            if TEMPLATE_CONSTANTS.RANGE not in field_obj:
                 raise ValueError("错误：{} 字段定义中未找到枚举定义 range 字段".format(name))
 
-            enum_defs = field_obj['Range']
+            enum_defs = field_obj[TEMPLATE_CONSTANTS.RANGE]
             enum_id = 0
             for enum_name in enum_defs:
                 current_enum = iot_enum(self.name, enum_name, enum_id)
@@ -68,13 +81,13 @@ class iot_field:
         elif self.type_name == "number":
             self.type_id = "TC_IOT_SHADOW_TYPE_NUMBER"
             self.type_define = "tc_iot_shadow_number"
-            if "Range" not in field_obj:
+            if TEMPLATE_CONSTANTS.RANGE not in field_obj:
                 raise ValueError("错误：{} 字段定义中未找到取值范围定义 Range 字段".format(name))
-            if len(field_obj["Range"]) != 2:
+            if len(field_obj[TEMPLATE_CONSTANTS.RANGE]) != 2:
                 raise ValueError("错误：{} 字段 Range 取值非法".format(name))
 
-            self.min_value = field_obj['Range'][0]
-            self.max_value = field_obj['Range'][1]
+            self.min_value = field_obj[TEMPLATE_CONSTANTS.RANGE][0]
+            self.max_value = field_obj[TEMPLATE_CONSTANTS.RANGE][1]
             self.default_value = self.min_value
             if self.default_value < self.min_value or self.default_value > self.max_value:
                 raise ValueError("错误：{} 字段 default 指定的默认值超出 min~max 取值范围".format(name))
@@ -128,8 +141,48 @@ class iot_field:
             sample_code = """
 <indent>field_name = *(field_define *)data;
 <indent>g_tc_iot_device_local_data.field_name = field_name;
+<indent>TC_IOT_LOG_TRACE("do something for field_name=%f", field_name);
+""".replace("<indent>", indent).replace("field_name", self.name).replace("field_define", self.type_define)
+        elif self.type_name == "int":
+            sample_code = """
+<indent>field_name = *(field_define *)data;
+<indent>g_tc_iot_device_local_data.field_name = field_name;
 <indent>TC_IOT_LOG_TRACE("do something for field_name=%d", field_name);
 """.replace("<indent>", indent).replace("field_name", self.name).replace("field_define", self.type_define)
+        else:
+            raise Exception("invalid data type")
+
+        return sample_code
+
+    def get_data_change_sample_code_snippet(self, indent):
+        sample_code = ""
+        if self.type_name == "bool":
+            sample_code = """
+<indent>g_tc_iot_device_local_data.field_name = !g_tc_iot_device_local_data.field_name;
+""".replace("<indent>", indent).replace("field_name", self.name)
+
+        elif self.type_name == "enum":
+            if (len(self.enums) > 1):
+                sample_code += """
+<indent>g_tc_iot_device_local_data.field_name += 1;
+<indent>g_tc_iot_device_local_data.field_name %= <max>;
+""".replace("<indent>", indent).replace("field_name", self.name).replace("<max>", str(len(self.enums)))
+
+        elif self.type_name == "number":
+            sample_code = """
+<indent>g_tc_iot_device_local_data.field_name += 1;
+<indent>g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
+"""
+            sample_code = sample_code.replace("<indent>", indent).replace("field_name", self.name)
+            sample_code = sample_code.replace("field_define", self.type_define).replace("<min>",str(self.min_value)).replace("<max>",str(self.max_value))
+
+        elif self.type_name == "int":
+            sample_code = """
+<indent>g_tc_iot_device_local_data.field_name += 1;
+<indent>g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
+"""
+            sample_code = sample_code.replace("<indent>", indent).replace("field_name", self.name)
+            sample_code = sample_code.replace("field_define", self.type_define).replace("<min>",str(self.min_value)).replace("<max>",str(self.max_value))
         else:
             raise Exception("invalid data type")
 
@@ -141,9 +194,9 @@ class iot_struct:
         self.fields = []
         self.field_id = 0
         for field_define in obj:
-            if "Name" not in field_define:
+            if TEMPLATE_CONSTANTS.NAME not in field_define:
                 raise ValueError("错误：字段定义中未找到 Name 字段")
-            self.fields.append(iot_field(field_define['Name'], self.field_id, field_define))
+            self.fields.append(iot_field(field_define[TEMPLATE_CONSTANTS.NAME], self.field_id, field_define))
             self.field_id += 1
 
     def generate_sample_code(self):
@@ -165,6 +218,14 @@ class iot_struct:
         sample_code += (indent * 1) + 'return TC_IOT_SUCCESS;\n'
         return declare_code + sample_code;
 
+    def generate_sim_data_change(self):
+        declare_code = ""
+        sample_code = ""
+        indent = "    "
+        for field in self.fields:
+            sample_code += field.get_data_change_sample_code_snippet(indent)
+        return declare_code + sample_code;
+
     def declare_local_data_struct(self, struct_name="tc_iot_shadow_local_data"):
         result = ""
         result += "typedef struct _" + struct_name + " {\n"
@@ -177,7 +238,7 @@ class iot_struct:
         result = ""
         for field in self.fields:
             result += "{}\n".format(field.get_id_define_str())
-	result += "\n#define TC_IOT_PROPTOTAL {}\n".format(self.field_id)
+        result += "\n#define TC_IOT_PROPTOTAL {}\n".format(self.field_id)
         return result
 
     def declare_local_data_enum(self):
@@ -201,16 +262,16 @@ tc_iot_shadow_client * tc_iot_get_shadow_client(void);
 #endif /* end of include guard */
 """
         header_str = ""
-        header_str += "/* 数据点本地存储结构定义 local data struct define */\n"
+        header_str += "/* 数据模板本地存储结构定义 local data struct define */\n"
         header_str += "typedef struct _tc_iot_shadow_local_data {\n"
         for field in self.fields:
             header_str += "    {}\n".format(field.get_struct_field_declare())
         header_str += "}tc_iot_shadow_local_data;\n"
 
-	header_str += "/* 数据点字段 ID 宏定义*/\n"
+        header_str += "/* 数据模板字段 ID 宏定义*/\n"
         for field in self.fields:
             header_str += "{}\n".format(field.get_id_define_str())
-	header_str += "\n#define TC_IOT_PROPTOTAL {}\n".format(self.field_id)
+        header_str += "\n#define TC_IOT_PROPTOTAL {}\n".format(self.field_id)
 
         for field in self.fields:
             if field.type_name == 'enum':
@@ -290,12 +351,21 @@ def main():
     try:
         device_config = json.load(f)
         device_config = AttributeDict(device_config)
+        device_config.ProductId = device_config.product_id
+        device_config.ProductKey = device_config.product_key
+        device_config.Region = device_config.region
+        device_config.AuthType = device_config.auth_type
+        device_config.Domain = device_config.domain
+        device_config.Username = device_config.username
+        device_config.Password = device_config.password
+        device_config.DataTemplate = device_config.data_template
+
         print("加载 {} 文件成功".format(config_path))
     except ValueError as e:
         print("错误：文件格式非法，请检查 {} 文件是否是 JSON 格式。".format(config_path))
         return 1
 
-    if "DataTemplate" not in device_config:
+    if TEMPLATE_CONSTANTS.DATA_TEMPLATE not in device_config:
         print("错误：{} 文件中未发现 DataTemplate 属性字段，请检查文件格式是否合法。".format(config_path))
         return 1
 
@@ -309,7 +379,7 @@ def main():
             output_file_name = config_dir + os.path.basename(template_file)
             output_file = open(output_file_name, "w")
             output_file.write(smart_parser(input_str, device_config, data_template))
-            print "文件 {} 生成成功".format(output_file_name)
+            print("文件 {} 生成成功".format(output_file_name))
 
 
         return 0

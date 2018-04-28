@@ -23,6 +23,10 @@
 #define HTTP_CONTENT_FORM_DATA "multipart/form-data"
 #define HTTP_CONTENT_JSON "application/json"
 
+#define HTTPS_PREFIX "https"
+#define HTTPS_PREFIX_LEN (sizeof(HTTPS_PREFIX) - 1)
+
+
 /* examples: */
 /* HTTP/1.0 200 OK */
 /* HTTP/1.1 404 Not Found */
@@ -137,6 +141,21 @@ int tc_iot_create_post_request(tc_iot_http_request* request,
                                const char* host, int host_len,
                                const char* body);
 
+/**
+ * @brief tc_iot_create_get_request 创建 HTTP GET 请求
+ *
+ * @param request HTTP 请求对象
+ * @param abs_path 请求服务路径
+ * @param abs_path_len 请求服务路径长度
+ * @param host 服务器地址
+ * @param host_len 服务器地址长度
+ *
+ * @return 返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_create_get_request(tc_iot_http_request* request,
+                               const char* abs_path, int abs_path_len,
+                               const char* host, int host_len);
 
 /**
  * @brief tc_iot_calc_auth_sign 计算 Token 请求签名
@@ -225,5 +244,12 @@ int tc_iot_create_active_device_form(char* form, int max_form_len,
  * 析
  */
 int tc_iot_parse_http_response_code(const char * http_resp);
+
+int tc_iot_http_get(tc_iot_network_t* network,
+                         tc_iot_http_request* request, const char* url,
+                         char* resp, int resp_max_len,
+                         int timeout_ms);
+typedef int (*tc_iot_http_download_callback)(const void * context, const char * data, int data_len, int offset, int total);
+int tc_iot_do_download(const char* api_url, tc_iot_http_download_callback download_callback, const void * context);
 
 #endif /* end of include guard */

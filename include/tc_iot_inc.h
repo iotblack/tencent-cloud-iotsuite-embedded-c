@@ -9,6 +9,7 @@
 #include "common/tc_iot_const.h"
 #include "common/tc_iot_bit.h"
 #include "common/tc_iot_safety_check.h"
+#include "common/tc_iot_md5.h"
 #include "common/tc_iot_hmac.h"
 #include "platform/tc_iot_hal_os.h"
 #include "platform/tc_iot_hal_timer.h"
@@ -25,5 +26,6 @@
 #include "iotsuite/tc_iot_client.h"
 #include "iotsuite/tc_iot_shadow.h"
 #include "iotsuite/tc_iot_token.h"
+#include "coap/tc_iot_coap.h"
 
 #endif /* end of include guard */

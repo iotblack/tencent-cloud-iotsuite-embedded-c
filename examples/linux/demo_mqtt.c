@@ -38,8 +38,8 @@ const char* tc_iot_hal_get_device_name(char *device_name, size_t len)
 
 int main(int argc, char** argv) {
     int ret = 0;
-    bool token_defined;
-    bool secrect_defined;
+    bool use_static_token; //true: ç›´è¿žæ¨¡å¼ ; false : ä¸´æ—¶tokenæ¨¡å¼
+    bool secrect_defined;  //true : åœ¨tokenæ¨¡å¼ä¸‹æœ¬åœ°æ— token, éœ€è¦æ¿€æ´»èŽ·å–
 
     tc_iot_mqtt_client_config * p_client_config;
     long timestamp = tc_iot_hal_timestamp(NULL);
@@ -49,10 +49,10 @@ int main(int argc, char** argv) {
     p_client_config = &(g_client_config);
     parse_command(p_client_config, argc, argv);
 
-    token_defined = strlen(p_client_config->device_info.username) && strlen(p_client_config->device_info.password);
+    use_static_token = strlen(p_client_config->device_info.username) && strlen(p_client_config->device_info.password);
     secrect_defined = (strlen(p_client_config->device_info.secret)>2);
 
-    if (!secrect_defined)
+    if (!secrect_defined && !use_static_token)
     {
         /* try to load device decrect from local storage */
         tc_iot_hal_get_value("device_secrect", p_client_config->device_info.secret,  sizeof(p_client_config->device_info.secret));
@@ -61,14 +61,15 @@ int main(int argc, char** argv) {
 
     tc_iot_hal_printf("p_client_config->device_info.secret %s %d\n", p_client_config->device_info.secret, TC_IOT_CONFIG_USE_TLS);
 
-    if (!token_defined) {
-        /*×ß http token ·½Ê½À´Á¬½Ó mqtt*/
+    if (!use_static_token) {
+        /*èµ° http token æ–¹å¼æ¥è¿žæŽ¥ mqtt*/
         if (!secrect_defined)
         {
-            /*¼ÙÈçÃ»ÓÐ secrect ÄÇÃ´Òª×ß¼¤»îÁ÷³ÌÀ´»ñÈ¡ device_secrect*/
+            /*å‡å¦‚æ²¡æœ‰ secrect é‚£ä¹ˆè¦èµ°æ¿€æ´»æµç¨‹æ¥èŽ·å– device_secrect*/
             tc_iot_hal_printf("requesting device_secrect for http token api\n");
             ret = http_get_device_secret(
-                TC_IOT_CONFIG_ACTIVE_API_URL_DEBUG, TC_IOT_CONFIG_ROOT_CA,
+                TC_IOT_CONFIG_ACTIVE_API_URL, //TC_IOT_CONFIG_ACTIVE_API_URL_DEBUG
+                TC_IOT_CONFIG_ROOT_CA,
                 timestamp, nonce, 
                 &p_client_config->device_info);
             
@@ -85,9 +86,9 @@ int main(int argc, char** argv) {
             //return 0;
 
         }
-        tc_iot_hal_printf("requesting username and password for mqtt.\n");
+        tc_iot_hal_printf("requesting username and password for mqtt by token interface.\n");
         ret = http_refresh_auth_token(
-                TC_IOT_CONFIG_AUTH_API_URL_DEBUG, //TC_IOT_CONFIG_AUTH_API_URL, 
+                TC_IOT_CONFIG_AUTH_API_URL, //TC_IOT_CONFIG_AUTH_API_URL_DEBUG
                 TC_IOT_CONFIG_ROOT_CA,
                 timestamp, nonce,
                 &p_client_config->device_info);

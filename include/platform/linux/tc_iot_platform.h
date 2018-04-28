@@ -27,7 +27,7 @@
 #define tc_iot_hal_printf printf
 #define tc_iot_hal_snprintf snprintf
 
-typedef struct tc_iot_timer { struct timeval end_time; } tc_iot_timer;
+struct _tc_iot_timer { struct timeval end_time; } ;
 
 #ifdef ENABLE_TLS
 /* mbetls begin */
@@ -55,6 +55,8 @@ typedef struct tc_iot_timer { struct timeval end_time; } tc_iot_timer;
 #include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
+#include "mbedtls/ssl_cookie.h"
+#include "mbedtls/timing.h"
 
 #include <string.h>
 /* mbetls end */
