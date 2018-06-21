@@ -1,12 +1,13 @@
 #ifndef TC_IOT_DEVICE_CONFIG_H
 #define TC_IOT_DEVICE_CONFIG_H
 
-/* 服务端获取动态username和password接口*/
-/* 地址格式为：<机房标识>.auth-device-iot.tencentcloudapi.com/token */
-/* 广州=gz*/
-/* 北京=bj*/
-/* ...*/
-/* 以下为广州机房的接口地址：*/
+/* 设备激活及获取 secret 接口，地址格式为：<机房标识>.auth-device-iot.tencentcloudapi.com/secret */
+/* Token接口，地址格式为：<机房标识>.auth-device-iot.tencentcloudapi.com/token */
+/* 机房标识：
+    广州机房=gz
+    北京机房=bj
+    ...
+*/
 #ifdef ENABLE_TLS
 #define TC_IOT_CONFIG_AUTH_API_URL "https://gz.auth-device-iot.tencentcloudapi.com/token"
 #define TC_IOT_CONFIG_ACTIVE_API_URL "https://gz.auth-device-iot.tencentcloudapi.com/secret"
@@ -43,6 +44,7 @@
 /*#define TC_IOT_CONFIG_SERVER_HOST "localhost"*/
 /* 产品id，可以在产品“基本信息页”->“产品id”位置找到*/
 #define TC_IOT_CONFIG_DEVICE_PRODUCT_ID "iot-9fi4gnz8"
+/* 产品id，可以在产品“基本信息页”->“产品key”位置找到*/
 #define TC_IOT_CONFIG_DEVICE_PRODUCT_KEY "mqtt-1doou8fjk"
 
 /* 设备密钥，可以在产品“设备管理”->“设备证书”->“Device Secret”位置找到*/
@@ -51,13 +53,7 @@
 /* 设备名称，可以在产品“设备管理”->“设备名称”位置找到*/
 #define TC_IOT_CONFIG_DEVICE_NAME "device_name"
 
-/* client id，*/
-/* 由两部分组成，组成形式为“ProductKey@DeviceID”，ClientID 的长度不超过 64个字符
- * */
-/* ，请不要使用不可见字符。其中*/
-/* ProductKey 为 IoT MQ 的实例 ID。*/
-/* DeviceID 为每个设备独一无二的标识，由业务方自己指定，需保证全局唯一，例如每个
- * 传感器设备的序列号。*/
+/* client id 由两部分组成，组成形式为“ProductKey@DeviceName” */
 #define TC_IOT_CONFIG_DEVICE_CLIENT_ID TC_IOT_CONFIG_DEVICE_PRODUCT_KEY "@" TC_IOT_CONFIG_DEVICE_NAME
 
 /************************************************************************/

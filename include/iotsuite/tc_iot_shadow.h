@@ -8,6 +8,7 @@ typedef double tc_iot_shadow_number;
 typedef int tc_iot_shadow_int;
 typedef int tc_iot_shadow_enum;
 typedef bool tc_iot_shadow_bool;
+typedef char * tc_iot_shadow_string;
 
 typedef enum _tc_iot_shadow_data_type_e {
     TC_IOT_SHADOW_TYPE_INVALID = 0,
@@ -15,6 +16,7 @@ typedef enum _tc_iot_shadow_data_type_e {
     TC_IOT_SHADOW_TYPE_NUMBER = 2,
     TC_IOT_SHADOW_TYPE_ENUM = 3,
     TC_IOT_SHADOW_TYPE_INT = 4,
+    TC_IOT_SHADOW_TYPE_STRING = 5,
 } tc_iot_shadow_data_type_e;
 
 typedef struct _tc_iot_shadow_property_def {
@@ -22,6 +24,7 @@ typedef struct _tc_iot_shadow_property_def {
     int id;
     tc_iot_shadow_data_type_e  type;
     int offset;
+    int len;
 } tc_iot_shadow_property_def;
 
 
@@ -50,7 +53,7 @@ typedef void (*message_ack_handler)(tc_iot_command_ack_status_e ack_status, tc_i
 
 
 #define TC_IOT_SESSION_ID_LEN     8
-#define TC_IOT_MAX_SESSION_COUNT  3
+#define TC_IOT_MAX_SESSION_COUNT  10
 
 typedef struct _tc_iot_shadow_session{
     char sid[TC_IOT_SESSION_ID_LEN+1];
@@ -134,14 +137,6 @@ int tc_iot_shadow_doc_pack_for_delete(char * buffer, int buffer_len, tc_iot_shad
  * */
 #define TC_IOT_MQTT_METHOD_CONTROL   "control"
 
-/**< 上报固件信息（设备主动上报）
- * {"method":"update_firm_info","state":{"mac":"xxxxx", "uuid": 123455}}
- * */
-#define TC_IOT_MQTT_METHOD_UPDATE_FIRM    "update_firm_info"
-/**< 上报固件信息控制指令（服务端下发指令，要求客户端上报）
- * {"method":"report_firm_info"}
- * */
-#define TC_IOT_MQTT_METHOD_REPORT_FIRM   "report_firm_info"
 /* 响应类 */
 /**< 读取请求响应*/
 #define TC_IOT_MQTT_METHOD_REPLY     "reply"
@@ -316,6 +311,7 @@ int tc_iot_shadow_cmp_local(tc_iot_shadow_client * c, int property_id, void * sr
 int tc_iot_shadow_cmp_local_with_reported(tc_iot_shadow_client * c, int property_id);
 int tc_iot_shadow_cmp_local_with_desired(tc_iot_shadow_client * c, int property_id);
 void * tc_iot_shadow_save_to_cached(tc_iot_shadow_client * c, int property_id, const void * p_data, void * p_cache);
+void * tc_iot_shadow_save_string_to_cached(tc_iot_shadow_client * c, int property_id, const void * p_data, int len, void * p_cache);
 
 int tc_iot_shadow_report_property(tc_iot_shadow_client * c, int property_id, char * buffer, int buffer_len);
 int tc_iot_shadow_check_and_report(tc_iot_shadow_client *c, char * buffer, int buffer_len,
@@ -326,8 +322,8 @@ const char * tc_iot_shadow_get_property_name(tc_iot_shadow_client * p_shadow_cli
 int tc_iot_shadow_get_property_type(tc_iot_shadow_client * p_shadow_client, int property_id);
 int tc_iot_shadow_get_property_offset(tc_iot_shadow_client * p_shadow_client, int property_id);
 
-int tc_iot_report_firm(tc_iot_shadow_client* p_shadow_client, ...);
 int tc_iot_report_device_data(tc_iot_shadow_client* p_shadow_client);
+int tc_iot_confirm_devcie_data(tc_iot_shadow_client* p_shadow_client);
 
 int tc_iot_server_init(tc_iot_shadow_client* p_shadow_client, tc_iot_shadow_config * p_client_config);
 int tc_iot_server_loop(tc_iot_shadow_client* p_shadow_client, int yield_timeout);

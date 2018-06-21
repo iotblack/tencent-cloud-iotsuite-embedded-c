@@ -4,12 +4,19 @@
 
 static void _tc_iot_coap_con_get_time_handler(tc_iot_coap_client * client, tc_iot_coap_con_status_e ack_status, 
         tc_iot_coap_message * message , void * session_context) {
+    unsigned char * payload = NULL;
+    int payload_len;
+
     if (ack_status == TC_IOT_COAP_CON_TIMEOUT) {
         TC_IOT_LOG_ERROR("message timeout");
         return;
     }
-    if (message && message->p_payload) {
-        TC_IOT_LOG_TRACE("len=%d,payload=%s", message->payload_len, message->p_payload);
+
+    tc_iot_coap_get_message_payload(message, &payload_len, &payload);
+    if (message && payload) {
+        TC_IOT_LOG_TRACE("len=%d,payload=%s", payload_len, payload);
+    } else {
+        TC_IOT_LOG_TRACE("[no payload]");
     }
 }
 
@@ -77,10 +84,24 @@ static void _tc_iot_coap_get_wellknown( tc_iot_coap_client * c) {
 }
 
 
+#define TC_IOT_CONFIG_DEVICE_PRODUCT_ID "iot-7hjcfc6k"
+#define TC_IOT_CONFIG_DEVICE_PRODUCT_KEY "mqtt-5ns8xh714"
+#define TC_IOT_CONFIG_DEVICE_SECRET "00000000000000000000000000000000"
+#define TC_IOT_CONFIG_DEVICE_NAME "light001"
+#define TC_IOT_CONFIG_DEVICE_CLIENT_ID TC_IOT_CONFIG_DEVICE_PRODUCT_KEY "@" TC_IOT_CONFIG_DEVICE_NAME
+
+#define TC_IOT_PUB_TOPIC_PREFIX "shadow/update/"
+#define TC_IOT_PUB_TOPIC_DEF TC_IOT_PUB_TOPIC_PREFIX TC_IOT_CONFIG_DEVICE_PRODUCT_ID "/" TC_IOT_CONFIG_DEVICE_NAME
+
 int main(int argc, char const* argv[])
 {
     tc_iot_coap_client coap_client;
     tc_iot_coap_client_config coap_config = {
+        {
+            /* device info*/
+            TC_IOT_CONFIG_DEVICE_SECRET, TC_IOT_CONFIG_DEVICE_PRODUCT_ID,
+            TC_IOT_CONFIG_DEVICE_NAME, TC_IOT_CONFIG_DEVICE_CLIENT_ID,
+        },
         "localhost",
         5683,
         tc_iot_coap_con_default_handler,
@@ -96,8 +117,12 @@ int main(int argc, char const* argv[])
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
 
-    tc_iot_coap_init(&coap_client, &coap_config);
+    tc_iot_coap_construct(&coap_client, &coap_config);
+    tc_iot_coap_auth(&coap_client);
+    tc_iot_coap_publish(&coap_client, TC_IOT_COAP_SERVICE_PUBLISH_PATH, "tp=" TC_IOT_PUB_TOPIC_DEF, "{\"method\":\"get\"}");
 
+    ret = tc_iot_coap_yield(&coap_client, 2000);
+    return 0;
     while (!stop) {
         tc_iot_hal_printf("-------------req-------------------\n");
         _tc_iot_coap_get_time(&coap_client);

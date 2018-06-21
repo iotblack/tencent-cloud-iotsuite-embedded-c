@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "tc_iot_inc.h"
 
 int tc_iot_yabuffer_init(tc_iot_yabuffer_t *yabuffer, char *buf, int len) {
@@ -28,6 +24,12 @@ int tc_iot_yabuffer_left(tc_iot_yabuffer_t *yabuffer) {
     IF_NULL_RETURN(yabuffer, TC_IOT_NULL_POINTER);
     space_left = yabuffer->len - yabuffer->pos;
     return space_left;
+}
+
+int tc_iot_yabuffer_len(tc_iot_yabuffer_t *yabuffer) {
+    int space_left;
+    IF_NULL_RETURN(yabuffer, TC_IOT_NULL_POINTER);
+    return yabuffer->len;
 }
 
 char *tc_iot_yabuffer_current(tc_iot_yabuffer_t *yabuffer) {
@@ -70,7 +72,3 @@ int tc_iot_yabuffer_n_append(tc_iot_yabuffer_t *yabuffer, const char *input,
     yabuffer->pos += copy_len;
     return copy_len;
 }
-
-#ifdef __cplusplus
-}
-#endif

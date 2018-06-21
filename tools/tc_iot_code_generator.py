@@ -4,8 +4,8 @@
 import json
 import sys
 import os
-import six
 import argparse
+import glob
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -91,6 +91,17 @@ class iot_field:
             self.default_value = self.min_value
             if self.default_value < self.min_value or self.default_value > self.max_value:
                 raise ValueError("错误：{} 字段 default 指定的默认值超出 min~max 取值范围".format(name))
+        elif self.type_name == "string":
+            self.type_id = "TC_IOT_SHADOW_TYPE_STRING"
+            self.type_define = "tc_iot_shadow_string"
+            if TEMPLATE_CONSTANTS.RANGE not in field_obj:
+                raise ValueError("错误：{} 字段定义中未找到取值范围定义 Range 字段".format(name))
+            if len(field_obj[TEMPLATE_CONSTANTS.RANGE]) != 2:
+                raise ValueError("错误：{} 字段 Range 取值非法".format(name))
+
+            self.min_value = field_obj[TEMPLATE_CONSTANTS.RANGE][0]
+            self.max_value = field_obj[TEMPLATE_CONSTANTS.RANGE][1]
+            self.default_value = "{'\\0'}"
         else:
             raise ValueError('{} 字段 数据类型 type={} 取值非法，有效值应为：bool,enum,number'.format(name, field_obj["type"]))
 
@@ -101,10 +112,14 @@ class iot_field:
         return "#define {} {}".format(self.get_id_c_macro_name(), self.index)
 
     def get_struct_field_declare(self):
-        return "{} {};".format(self.type_define, self.name)
+        if self.type_define == "tc_iot_shadow_string":
+            return "char {}[{}+1];".format(self.name, str(self.max_value))
+        else:
+            return "{} {};".format(self.type_define, self.name)
 
     def get_meta_define_str(self):
-        return '{{ "{}", {}, {}, offsetof(tc_iot_shadow_local_data, {}) }},'.format(self.name, self.get_id_c_macro_name(), self.type_id, self.name)
+        return '{{ "{}", {}, {}, offsetof(tc_iot_shadow_local_data, {}),TC_IOT_MEMBER_SIZE(tc_iot_shadow_local_data,{}) }},' \
+                    .format(self.name, self.get_id_c_macro_name(), self.type_id, self.name, self.name)
 
     def get_sample_code_snippet(self, indent, data_pointer):
         sample_code = ""
@@ -149,6 +164,12 @@ class iot_field:
 <indent>g_tc_iot_device_local_data.field_name = field_name;
 <indent>TC_IOT_LOG_TRACE("do something for field_name=%d", field_name);
 """.replace("<indent>", indent).replace("field_name", self.name).replace("field_define", self.type_define)
+        elif self.type_name == "string":
+            sample_code = """
+<indent>field_name = (char *)data;
+<indent>strcpy(g_tc_iot_device_local_data.field_name, field_name);
+<indent>TC_IOT_LOG_TRACE("do something for field_name=%s", field_name);
+""".replace("<indent>", indent).replace("field_name", self.name).replace("field_define", self.type_define)
         else:
             raise Exception("invalid data type")
 
@@ -171,7 +192,7 @@ class iot_field:
         elif self.type_name == "number":
             sample_code = """
 <indent>g_tc_iot_device_local_data.field_name += 1;
-<indent>g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
+<indent>g_tc_iot_device_local_data.field_name = g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
 """
             sample_code = sample_code.replace("<indent>", indent).replace("field_name", self.name)
             sample_code = sample_code.replace("field_define", self.type_define).replace("<min>",str(self.min_value)).replace("<max>",str(self.max_value))
@@ -179,7 +200,18 @@ class iot_field:
         elif self.type_name == "int":
             sample_code = """
 <indent>g_tc_iot_device_local_data.field_name += 1;
-<indent>g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
+<indent>g_tc_iot_device_local_data.field_name = g_tc_iot_device_local_data.field_name > <max>?<min>:g_tc_iot_device_local_data.field_name;
+"""
+            sample_code = sample_code.replace("<indent>", indent).replace("field_name", self.name)
+            sample_code = sample_code.replace("field_define", self.type_define).replace("<min>",str(self.min_value)).replace("<max>",str(self.max_value))
+        elif self.type_name == "string":
+            sample_code = """
+<indent>for (i = 0; i < <min>+1;i++) {
+<indent><indent>g_tc_iot_device_local_data.field_name[i] += 1;
+<indent><indent>g_tc_iot_device_local_data.field_name[i] = g_tc_iot_device_local_data.field_name[0] > 'Z'?'A':g_tc_iot_device_local_data.field_name[0];
+<indent><indent>g_tc_iot_device_local_data.field_name[i] = g_tc_iot_device_local_data.field_name[0] < 'A'?'A':g_tc_iot_device_local_data.field_name[0];
+<indent>}
+<indent>g_tc_iot_device_local_data.field_name[<min>+2] = 0;
 """
             sample_code = sample_code.replace("<indent>", indent).replace("field_name", self.name)
             sample_code = sample_code.replace("field_define", self.type_define).replace("<min>",str(self.min_value)).replace("<max>",str(self.max_value))
@@ -219,7 +251,7 @@ class iot_struct:
         return declare_code + sample_code;
 
     def generate_sim_data_change(self):
-        declare_code = ""
+        declare_code = "    int i = 0;\n"
         sample_code = ""
         indent = "    "
         for field in self.fields:
@@ -312,17 +344,15 @@ def smart_parser(source_str, template_config, data_template, script_open_mark="/
     while(code_start >= 0):
         code_end = source_str.find(script_close_mark, code_start)
         if (code_end <= code_start):
-            print("ERROR: " + script_open_mark + " has no match " + script_close_mark + "\n")
+            print(u"ERROR: " + script_open_mark + " has no match " + script_close_mark + "\n")
             break
         result += source_str[start:code_start]
         code_snip = source_str[code_start+len(script_open_mark):code_end]
         temp = eval(code_snip)
         if (isinstance(temp, int)):
             result += str(temp)
-        elif (isinstance(temp, six.string_types)):
-            result += temp
         else:
-            print("ERROR: unkonw data type return by:" + code_snip)
+            result += temp
 
         start = code_end + len(script_close_mark)
         code_start = source_str.find(script_open_mark, start)
@@ -340,7 +370,7 @@ def main():
 
     config_path = args.config
     if not os.path.exists(config_path):
-        print("错误：{} 文件不存在，请重新指定 device_config.json 文件路径".format(config_path))
+        print(u"错误：{} 文件不存在，请重新指定 device_config.json 文件路径".format(config_path))
         return 1
 
     config_dir = os.path.dirname(config_path)
@@ -358,28 +388,31 @@ def main():
         device_config.Domain = device_config.domain
         device_config.Username = device_config.username
         device_config.Password = device_config.password
+        if 'data_template' not in device_config:
+            device_config.data_template = []
         device_config.DataTemplate = device_config.data_template
 
-        print("加载 {} 文件成功".format(config_path))
+        print(u"加载 {} 文件成功".format(config_path))
     except ValueError as e:
-        print("错误：文件格式非法，请检查 {} 文件是否是 JSON 格式。".format(config_path))
+        print(u"错误：文件格式非法，请检查 {} 文件是否是 JSON 格式。".format(config_path))
         return 1
 
     if TEMPLATE_CONSTANTS.DATA_TEMPLATE not in device_config:
-        print("错误：{} 文件中未发现 DataTemplate 属性字段，请检查文件格式是否合法。".format(config_path))
+        print(u"错误：{} 文件中未发现 DataTemplate 属性字段，请检查文件格式是否合法。".format(config_path))
         return 1
 
     try:
         data_template = iot_struct(device_config.DataTemplate)
-        for template_file in args.files:
-            input_file_name = template_file
-            input_file = open(input_file_name, "r")
-            input_str = input_file.read()
+        for template_files in args.files:
+            for template_file in glob.glob(template_files):
+                input_file_name = template_file
+                input_file = open(input_file_name, "r")
+                input_str = input_file.read()
 
-            output_file_name = config_dir + os.path.basename(template_file)
-            output_file = open(output_file_name, "w")
-            output_file.write(smart_parser(input_str, device_config, data_template))
-            print("文件 {} 生成成功".format(output_file_name))
+                output_file_name = config_dir + os.path.basename(template_file)
+                output_file = open(output_file_name, "w")
+                output_file.write(smart_parser(input_str, device_config, data_template))
+                print(u"文件 {} 生成成功".format(output_file_name))
 
 
         return 0

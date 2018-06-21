@@ -4,18 +4,18 @@
 #define HTTPS_PREFIX "https"
 #define HTTPS_PREFIX_LEN (sizeof(HTTPS_PREFIX) - 1)
 typedef struct _tc_iot_down_helper{
-    int fd;
-    const char * digest;
+    FILE * fp;
+    /* const char * digest; */
     tc_iot_md5_t md5_context;
 }tc_iot_download_helper;
 
 int my_http_download_callback(const void * context, const char * data, int data_len, int offset, int total) {
     tc_iot_download_helper * helper = (tc_iot_download_helper *)context;
     /* tc_iot_hal_printf("\n[%d/%d]\n->%s", offset+data_len, total, data); */
-    tc_iot_hal_printf("%d/%d\n", offset+data_len, total);
-    write(helper->fd,data,data_len);
+    /* tc_iot_hal_printf("%d/%d\n", offset+data_len, total); */
+    fwrite(data,1,data_len,helper->fp);
     tc_iot_md5_update(&helper->md5_context, data, data_len);
-    /* tc_iot_hal_printf("%s", data); */
+    return TC_IOT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -26,7 +26,11 @@ int main(int argc, char** argv) {
     const char * filename = NULL;
     unsigned char file_md5_digest[TC_IOT_MD5_DIGEST_SIZE];
     char md5str[TC_IOT_MD5_DIGEST_SIZE*2 +1];
+    char buffer[64];
+    int byte_read = 0;
+    int partial_start = 0;
     tc_iot_download_helper helper;
+
     memset(file_md5_digest, 0, sizeof(file_md5_digest));
     memset(&helper, 0, sizeof(helper));
 
@@ -72,14 +76,22 @@ print_help:
         }
     }
 
-    fd=open(filename,O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if(fd != -1){
-        tc_iot_hal_printf("%s file is created.\n", filename);
+
+    helper.fp = fopen(filename,"ab+");
+    if(helper.fp == NULL){
+        tc_iot_hal_printf("%s file open failed.\n", filename);
+        return 0;
+    }
+    
+    tc_iot_md5_init(&helper.md5_context);
+
+    fseek(helper.fp, 0, SEEK_SET);
+    while((byte_read = fread( buffer, 1, sizeof(buffer), helper.fp)) > 0) {
+        tc_iot_md5_update(&helper.md5_context, buffer, byte_read);
+        partial_start += byte_read;
     }
 
-    helper.fd = fd;
-    tc_iot_md5_init(&helper.md5_context);
-    ret = tc_iot_do_download(download_url, my_http_download_callback, &helper);
+    ret = tc_iot_ota_download(download_url, partial_start, my_http_download_callback, &helper);
     if (ret != TC_IOT_SUCCESS) {
         tc_iot_hal_printf("ERROR: %s download as %s failed.\n", download_url, filename);
     } else {
@@ -88,6 +100,6 @@ print_help:
         tc_iot_hal_printf("md5=%s\n", tc_iot_util_byte_to_hex(file_md5_digest, sizeof(file_md5_digest), md5str, sizeof(md5str)));
     }
 
-    close(fd);
+    fclose(helper.fp);
 }
 

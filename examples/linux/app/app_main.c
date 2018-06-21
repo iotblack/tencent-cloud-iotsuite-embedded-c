@@ -42,6 +42,7 @@ void operate_device(tc_iot_shadow_local_data * p_device_data) {
 
 void do_sim_data_change(void) {
     TC_IOT_LOG_TRACE("simulate data change.");
+    int i = 0;
 
     g_tc_iot_device_local_data.param_bool = !g_tc_iot_device_local_data.param_bool;
 
@@ -49,7 +50,14 @@ void do_sim_data_change(void) {
     g_tc_iot_device_local_data.param_enum %= 3;
 
     g_tc_iot_device_local_data.param_number += 1;
-    g_tc_iot_device_local_data.param_number > 4095?0:g_tc_iot_device_local_data.param_number;
+    g_tc_iot_device_local_data.param_number = g_tc_iot_device_local_data.param_number > 4095?0:g_tc_iot_device_local_data.param_number;
+
+    for (i = 0; i < 0+1;i++) {
+        g_tc_iot_device_local_data.param_string[i] += 1;
+        g_tc_iot_device_local_data.param_string[i] = g_tc_iot_device_local_data.param_string[0] > 'Z'?'A':g_tc_iot_device_local_data.param_string[0];
+        g_tc_iot_device_local_data.param_string[i] = g_tc_iot_device_local_data.param_string[0] < 'A'?'A':g_tc_iot_device_local_data.param_string[0];
+    }
+    g_tc_iot_device_local_data.param_string[0+2] = 0;
 
 
     /* 上报数据最新状态 */
@@ -60,12 +68,14 @@ int main(int argc, char** argv) {
     tc_iot_mqtt_client_config * p_client_config;
     bool use_static_token;
     int ret;
+    int i = 0;
     long timestamp = tc_iot_hal_timestamp(NULL);
     tc_iot_hal_srandom(timestamp);
     long nonce = tc_iot_hal_random();
 
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
+    setbuf(stdout, NULL);
 
     p_client_config = &(g_tc_iot_shadow_config.mqtt_client_config);
 
@@ -105,7 +115,10 @@ int main(int argc, char** argv) {
 
     while (!stop) {
         tc_iot_server_loop(tc_iot_get_shadow_client(), 200);
-        tc_iot_hal_sleep_ms(1000);
+        for (i = 5; i > 0; i--) {
+            tc_iot_hal_printf("%d ...\n", i);
+            tc_iot_hal_sleep_ms(1000);
+        }
         do_sim_data_change();
     }
 

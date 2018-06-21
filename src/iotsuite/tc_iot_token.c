@@ -1,7 +1,3 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "tc_iot_inc.h"
 
 int http_post_urlencoded(tc_iot_network_t* network,
@@ -58,7 +54,8 @@ int http_post_urlencoded(tc_iot_network_t* network,
 
 int http_refresh_auth_token(const char* api_url, char* root_ca_path, long timestamp, long nonce,
         tc_iot_device_info* p_device_info) {
-    return http_refresh_auth_token_with_expire(api_url, root_ca_path, timestamp, nonce, p_device_info, 3600);
+    return http_refresh_auth_token_with_expire(api_url, root_ca_path, 
+            timestamp, nonce, p_device_info, TC_IOT_TOKEN_DEFAULT_EXPIRE_SECOND);
 }
 
 int http_refresh_auth_token_with_expire(const char* api_url, char* root_ca_path, long timestamp, long nonce,
@@ -307,7 +304,10 @@ int http_get_device_secret(const char* api_url, char* root_ca_path, long timesta
 		p_device_info->product_id, strlen(p_device_info->product_id),
 		nonce, timestamp);
 
-    TC_IOT_LOG_TRACE("signed request form:\n%.*s", sign_len, sign_out);
+    if (sign_len < sizeof(sign_out)) {
+        sign_out[sign_len] = '\0';
+        TC_IOT_LOG_TRACE("signed request form:\n%s", sign_out);
+    }
 
     memset(&network, 0, sizeof(network));
 
@@ -444,6 +444,3 @@ parse_url:
         return TC_IOT_ERROR_HTTP_REQUEST_FAILED;
     }
 }
-#ifdef __cplusplus
-}
-#endif

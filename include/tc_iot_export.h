@@ -61,8 +61,8 @@ char tc_iot_mqtt_client_is_connected(tc_iot_mqtt_client* p_mqtt_client);
 
 
 /**
- * @brief tc_iot_mqtt_client_yield 在当前线程为底层服务，让出一定 CPU 执
- * 行时间
+ * @brief tc_iot_mqtt_client_yield MQTT client
+ * 主循环，包含心跳维持、上行消息响应超时检测、服务器下行消息收取等操作。
  *
  * @param p_mqtt_client MQTT client 对象
  * @param timeout_ms 等待时延，单位毫秒
@@ -187,22 +187,223 @@ int tc_iot_report_device_data(tc_iot_shadow_client* p_shadow_client);
 int tc_iot_confirm_devcie_data(tc_iot_shadow_client* p_shadow_client);
 
 /**
- *  @brief tc_iot_report_firm
+ * @brief tc_iot_coap_construct 初始化 CoAP 客户端数据
+ *
+ * @param c 待初始化的 CoAP 客户端数据结构。
+ * @param p_client_config 初始化相关参数，包括
+ * CoAP 服务地址及端口、是否使用 DTLS及DTLS PSK、
+ * 产品信息、设备名称、设备密钥、回调函数等。
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_coap_construct(tc_iot_coap_client* c, tc_iot_coap_client_config* p_client_config);
+
+
+/**
+ * @brief tc_iot_coap_auth 发起认证，获取后续服务所需的设备 Token。
+ *
+ * @param c 已初始化好的 CoAP 客户端。
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_coap_auth(tc_iot_coap_client* c);
+
+
+/**
+ * @brief tc_iot_coap_send_message 向服务端发送 CoAP 消息。
+ *
+ * @param c 已成功获取获取授权 Token 的 CoAP 客户端。
+ * @param message 待发送的消息
+ * @param callback 消息回调
+ * @param timeout_ms 消息最大等待时延
+ * @param session_context 消息回调透传参数
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_coap_send_message(tc_iot_coap_client* c, tc_iot_coap_message* message,
+        tc_iot_coap_con_handler callback, int timeout_ms, void * session_context);
+
+
+/**
+ * @brief tc_iot_coap_publish 为基于 tc_iot_coap_send_message
+ * 的上层逻辑封装，用来单向发送上报消息。
+ *
+ * @param c 已成功获取获取授权 Token 的 CoAP 客户端。
+ * @param uri_path 上报接口 URI Path，当前固定填写
+ * TC_IOT_COAP_SERVICE_PUBLISH_PATH。
+ * @param topic_query_uri 上报消息发送目的 Topic
+ * 参数，参数固定格式为：tp=Topic_Name，即如果上报消息到 TopicA，
+ * 参数应增加 tp= 前缀后，填写为 “tp=TopicA”
+ * @param msg 上报消息 Payload 。
+ * @param callback 上报结果回调。
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ *
+ */
+int tc_iot_coap_publish( tc_iot_coap_client * c, const char * uri_path, 
+        const char * topic_query_uri, const char * msg, tc_iot_coap_con_handler callback);
+
+/**
+ * @brief tc_iot_coap_rpc 为基于 tc_iot_coap_send_message 
+ * 的上层逻辑封装，用来调用影子服务或基于自定义 Topic 的远程服务。
+ *
+ * @param c 已成功获取获取授权 Token 的 CoAP 客户端。
+ * @param uri_path 上报接口 URI Path，当前固定填写
+ * TC_IOT_COAP_SERVICE_RPC_PATH。
+ * @param topic_query_uri RPC 请求参数发送目的 Topic
+ * 参数，参数固定格式为：pt=Topic_Name，即如果到 TopicUpdate，
+ * 参数应增加 pt= 前缀后，填写为 “pt=TopicUpdate”
+ * @param topic_resp_uri RPC 调用响应 Topic
+ * 参数，参数固定格式为：st=Topic_Name，即如果到 TopicCmd，
+ * 参数应增加 st= 前缀后，填写为 “st=TopicUpdate”
+ * @param msg 上报消息 Payload 。
+ * @param callback RPC 调用结果回调。
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ *
+ */
+int tc_iot_coap_rpc( tc_iot_coap_client * c, const char * uri_path, 
+        const char * topic_query_uri, const char * topic_resp_uri,
+        const char * msg, tc_iot_coap_con_handler callback);
+
+/**
+ *
+ * @brief tc_iot_coap_yield  CoAP client 主循环，包含上行消息响应超时
+ * 检测、服务器下行消息收取等操作。
+ *
+ * @param c CoAP client 对象
+ * @param timeout_ms 等待时延，单位毫秒
+ *
+ * @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_coap_yield(tc_iot_coap_client * c, int timeout_ms);
+
+
+/**
+ * @brief tc_iot_coap_destroy 释放 CoAP client 对象相关资源。
+ *
+ * @param c CoAP client 对象
+ */
+void tc_iot_coap_destroy(tc_iot_coap_client* c);
+
+
+/**
+ * @brief tc_iot_coap_get_message_code 获取消息请求或返回码。
+ *
+ * @param message CoAP 消息
+ *
+ * @return 消息请求或返回码
+ * @see tc_iot_coap_rsp_code
+ */
+unsigned char tc_iot_coap_get_message_code(tc_iot_coap_message* message);
+
+/**
+ * @brief tc_iot_coap_get_message_payload 获取 CoAP 消息的 Payload 内容。
+ *
+ * @param message CoAP 消息
+ * @param payload_len Payload 的长度
+ * @param payload Payload 内容首地址
+ *
+ * @return 结果返回码，返回 TC_IOT_SUCCESS 则说明获取成功。
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_coap_get_message_payload(tc_iot_coap_message* message, int *payload_len, unsigned char **payload);
+
+
+
+/**
+ * @brief tc_iot_ota_construct 初始化 OTA 服务对象
+ *
+ * @param ota_handler 待初始化的 OTA 对象
+ * @param mqtt_client OTA 对象通过 MQTT 协议与服务端通讯，需要指定用于通讯的
+ * MQTT Client。
+ * @param sub_topic OTA 下行消息 Topic
+ * @param pub_topic OTA 上行消息 Topic
+ * @param ota_msg_callback OTA 下行消息回调通知函数
+ *
+ * @return 结果返回码，返回 TC_IOT_SUCCESS 则说明获取成功。
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_ota_construct(tc_iot_ota_handler * ota_handler, tc_iot_mqtt_client * mqtt_client, 
+        const char * sub_topic, const char * pub_topic, message_handler ota_msg_callback);
+
+
+/**
+ * @brief tc_iot_ota_destroy OTA 服务析构处理，取消 OTA 消息订阅，释放资源。
+ *
+ * @param ota_handler 待释放的 OTA 服务对象
+ */
+void tc_iot_ota_destroy(tc_iot_ota_handler * ota_handler);
+
+
+/**
+ * @brief tc_iot_ota_report_upgrade OTA 升级执行过程中，上报固件下载及升级进度。
+ *
+ * @param ota_handler OTA 服务对象
+ * @param state 当前升级进展枚举
+ * @param message 辅助消息
+ * 1.当前进展为成功时：上报 TC_IOT_OTA_MESSAGE_SUCCESS ；
+ * 2.出错或失败时：上报对应的失败消息或者 TC_IOT_OTA_MESSAGE_FAILED ；
+ * @param percent 百分比，0~100，仅当 state 为 OTA_DOWNLOAD
+ * 时有效，用来上报下载完成百分比。
+ *
+ * @return 结果返回码，返回 TC_IOT_SUCCESS 则说明获取成功。
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_ota_report_upgrade(tc_iot_ota_handler * ota_handler, tc_iot_ota_state_e state, char * message, int percent);
+
+/**
+ *  @brief tc_iot_ota_report_firm
      上报设备系统信息
  @par
  上报固件信息，固件信息 key 和 value 由根据实际应用场景指定。例如，要上报 固件版本，sdk 版本，
  硬件版本，调用方式为：
 
  @code{.c}
- tc_iot_report_firm("firm_version":"1.0.192", "sdk_version":"1.8", "harderwaer_ver":"gprs.v.1.0.2018092", NULL)
+ tc_iot_ota_report_firm(&handler,
+         "sdk-ver", TC_IOT_SDK_VERSION,
+         "firm-ver",TC_IOT_FIRM_VERSION, NULL);
  @endcode
 
- *  @param  p_shadow_client 设备影子对象
+ *  @param ota_handler OTA 对象
  *  @param va_list 可变参数列表，根据实际上报情况指定，格式为 key1,value1,key2,value2, ..., NULL
  * 按照 key value 对方式，依次指定，最后一个参数必须为NULL，作为变参终止符。
  *  @return 结果返回码
  * @see tc_iot_sys_code_e
  */
-int tc_iot_report_firm(tc_iot_shadow_client* p_shadow_client, ...);
+int tc_iot_ota_report_firm(tc_iot_ota_handler * ota_handler, ...);
+
+
+/**
+ * @brief tc_iot_ota_request_content_length 获取指定 URL 文件的大小。
+ *
+ * @param api_url 带获取信息的文件 URL
+ *
+ *  @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_ota_request_content_length(const char* api_url);
+
+
+/**
+ * @brief tc_iot_ota_download 根据指定的固件 URL 地址，下载固件
+ *
+ * @param api_url 固件地址
+ * @param partial_start 下载偏移地址，默认填 0，当需要续传时，传需要偏移的值。
+ * @param download_callback
+ * 下载过程回调，由于缓存区有限，每下载成功一段数据，就会通过本回调，通知设备端
+ * 进行处理，例如，写入到 Flash 中。
+ * @param context 回调透传数据
+ *
+ *  @return 结果返回码
+ * @see tc_iot_sys_code_e
+ */
+int tc_iot_ota_download(const char* api_url, int partial_start, tc_iot_http_download_callback download_callback, const void * context);
 
 #endif /* end of include guard */

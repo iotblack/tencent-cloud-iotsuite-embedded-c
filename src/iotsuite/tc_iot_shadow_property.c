@@ -1,10 +1,4 @@
-#include "tc_iot_export.h"
-
- /* 长度需要足够存放：
-  * 1) 2^64 的十进制数据值。
-  * 2) true or false 布尔字符串。
-  * 3) method 字段数据: get, update, update_firm_info, report_firm_info, reply */
-#define TC_IOT_MAX_FIELD_LEN  22
+#include "tc_iot_inc.h"
 
 
 /**
@@ -146,8 +140,10 @@ int _tc_iot_sync_shadow_property(tc_iot_shadow_client * p_shadow_client,
         for(j = 0; j < property_total; j++) {
             p_prop = &properties[j];
             if (strncmp(p_prop->name, key_start, key_len) == 0)  {
-                strncpy(field_buf, val_start, val_len);
-                field_buf[val_len] = '\0';
+                if (val_len < sizeof(field_buf)) {
+                    strncpy(field_buf, val_start, val_len);
+                    field_buf[val_len] = '\0';
+                }
 
                 if (strncmp(TC_IOT_JSON_NULL, field_buf, val_len) == 0) {
                     TC_IOT_LOG_WARN("%s recevied null value.", p_prop->name);
@@ -170,12 +166,20 @@ int _tc_iot_sync_shadow_property(tc_iot_shadow_client * p_shadow_client,
                     new_int = atoi(field_buf);
                     ptr = &new_int;
                     TC_IOT_LOG_TRACE("state change:[%s=%d]", p_prop->name, (*(tc_iot_shadow_int *) ptr));
+                } else if (p_prop->type == TC_IOT_SHADOW_TYPE_STRING) {
+                    ptr = tc_iot_shadow_save_string_to_cached(p_shadow_client, p_prop->id, val_start, val_len, 
+                            p_shadow_client->p_shadow_config->p_desired_device_data);
+                    if (ptr) {
+                        TC_IOT_LOG_TRACE("state change:[%s=%s]", p_prop->name, (const char *)ptr);
+                    }
                 } else {
                     TC_IOT_LOG_ERROR("%s type=%d invalid.", p_prop->name, p_prop->type);
                     continue;
                 }
 
-                tc_iot_shadow_save_to_cached(p_shadow_client, p_prop->id, ptr, p_shadow_client->p_shadow_config->p_desired_device_data);
+                if (p_prop->type != TC_IOT_SHADOW_TYPE_STRING) {
+                    tc_iot_shadow_save_to_cached(p_shadow_client, p_prop->id, ptr, p_shadow_client->p_shadow_config->p_desired_device_data);
+                }
                 TC_IOT_BIT_SET(p_shadow_client->desired_bits, p_prop->id);
                 ret = tc_iot_shadow_event_notify(p_shadow_client, TC_IOT_SHADOW_EVENT_SERVER_CONTROL, ptr, p_prop);
                 if (ret == TC_IOT_SUCCESS) {
@@ -224,10 +228,6 @@ void tc_iot_device_on_message_received(tc_iot_message_data* md) {
         TC_IOT_LOG_TRACE("Control data receved.");
     } else if (strncmp(TC_IOT_MQTT_METHOD_REPLY, field_buf, strlen(field_buf)) == 0) {
         TC_IOT_LOG_TRACE("Reply pack recevied.");
-    } else if (strncmp(TC_IOT_MQTT_METHOD_REPORT_FIRM, field_buf, strlen(field_buf)) == 0) {
-        TC_IOT_LOG_TRACE("request report firm info.");
-        tc_iot_shadow_event_notify(p_shadow_client, TC_IOT_SHADOW_EVENT_REQUEST_REPORT_FIRM, NULL, NULL);
-        return;
     }
 
     tc_iot_shadow_doc_parse(p_shadow_client, (const char *)message->payload, json_token, ret, field_buf, sizeof(field_buf));
@@ -306,26 +306,6 @@ int tc_iot_confirm_devcie_data(tc_iot_shadow_client* p_shadow_client) {
     return ret;
 }
 
-int tc_iot_report_firm(tc_iot_shadow_client* p_shadow_client, ...) {
-    char buffer[512];
-    int buffer_len = sizeof(buffer);
-
-    int ret = 0;
-    va_list p_args;
-
-    va_start(p_args, p_shadow_client);
-    ret = tc_iot_shadow_update_firm_info(p_shadow_client, buffer, buffer_len,
-            _tc_iot_update_firm_message_ack_callback, p_shadow_client->mqtt_client.command_timeout_ms, NULL, p_args);
-    if (ret == TC_IOT_SUCCESS) {
-        TC_IOT_LOG_TRACE("[c-s]update_firm_info: %s", buffer);
-    } else {
-        TC_IOT_LOG_TRACE("[c-s]update_firm_info failed(%d): %s", ret, buffer);
-    }
-    va_end( p_args);
-    return ret;
-}
-
-
 int tc_iot_shadow_event_notify(tc_iot_shadow_client * p_shadow_client, tc_iot_event_e event, void * data, void * context) {
     tc_iot_event_message event_msg;
 
@@ -341,6 +321,14 @@ int tc_iot_shadow_event_notify(tc_iot_shadow_client * p_shadow_client, tc_iot_ev
     }
 }
 
+/*
+根据初始配置，初始化 client：
+1. 连接 MQ 服务器；
+2. 订阅 shadow/get/${product_id}/${device_name} Topic，用来接收下行消息；
+3. 通知设备应用上报设备属性信息；
+4. 发送 {"method":"get"} 请求，获取离线期间累积的，待处理控制指令；
+5. 上报最新设备状态；
+*/
 int tc_iot_server_init(tc_iot_shadow_client* p_shadow_client, tc_iot_shadow_config * p_client_config) {
     int ret = 0;
     char buffer[128];
@@ -358,8 +346,6 @@ int tc_iot_server_init(tc_iot_shadow_client* p_shadow_client, tc_iot_shadow_conf
     /* 执行 yield 收取影子服务端前序指令消息，清理历史状态。 */
     tc_iot_shadow_yield(p_shadow_client, 200);
     TC_IOT_LOG_INFO("yield waiting for server finished.");
-
-    tc_iot_shadow_event_notify(p_shadow_client, TC_IOT_SHADOW_EVENT_REQUEST_REPORT_FIRM, NULL, NULL);
 
     /* 通过get操作主动获取服务端影子设备状态，以便设备端同步更新至最新状态*/
     ret = tc_iot_shadow_get(p_shadow_client, buffer, buffer_len, _tc_iot_get_message_ack_callback,
@@ -437,10 +423,19 @@ int tc_iot_shadow_get_property_offset(tc_iot_shadow_client * p_shadow_client, in
 }
 
 
+/*
+服务主循环：
+1. 接收服务端响应消息和控制指令等；
+2. 检查 session 队列请求的超时情况，超时则回调通知应用；
+3. 检查keep alive 情况，超时则发送keep alive ping 包；心跳失败，则进入重连；
+ * */
 int tc_iot_server_loop(tc_iot_shadow_client* p_shadow_client, int yield_timeout) {
     return tc_iot_shadow_yield(p_shadow_client, yield_timeout);
 }
 
+/*
+服务退出，释放关闭连接、相关资源等。
+ * */
 int tc_iot_server_destroy(tc_iot_shadow_client* p_shadow_client) {
 
     TC_IOT_LOG_TRACE("Stopping");
