@@ -38,7 +38,6 @@ tc_iot_mqtt_client_config g_client_config = {
 };
 
 int main(int argc, char** argv) {
-    int ret = 0;
     tc_iot_mqtt_client_config * p_client_config;
 
     if (argc == 2 && strcmp(argv[1],"--firm-version") == 0) {
@@ -71,10 +70,12 @@ void _refresh_token() {
 
     if (!use_static_token) {
         tc_iot_hal_printf("requesting username and password for mqtt.\n");
-        ret = http_refresh_auth_token(
+        ret = http_refresh_auth_token_with_expire(
                 TC_IOT_CONFIG_AUTH_API_URL, TC_IOT_CONFIG_ROOT_CA,
                 timestamp, nonce,
-                &p_client_config->device_info);
+                &p_client_config->device_info,
+                TC_IOT_TOKEN_MAX_EXPIRE_SECOND
+                );
         if (ret != TC_IOT_SUCCESS) {
             tc_iot_hal_printf("refresh token failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);
             return;
@@ -119,7 +120,6 @@ void sig_handler(int sig) {
 
 int run_mqtt(tc_iot_mqtt_client_config* p_client_config) {
     int ret;
-    char * action_get;
     int timeout = 200;
     tc_iot_ota_handler * ota_handler = &handler;
 
@@ -167,5 +167,7 @@ int run_mqtt(tc_iot_mqtt_client_config* p_client_config) {
     tc_iot_ota_destroy(&handler);
 
     tc_iot_mqtt_client_disconnect(p_client);
+    tc_iot_mqtt_client_destroy(p_client);
+    return 0;
 }
 

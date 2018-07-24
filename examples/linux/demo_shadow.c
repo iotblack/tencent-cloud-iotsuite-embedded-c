@@ -92,10 +92,12 @@ int main(int argc, char** argv) {
 
     if (!use_static_token) {
         tc_iot_hal_printf("requesting username and password for mqtt.\n");
-        ret = http_refresh_auth_token(
+        ret = http_refresh_auth_token_with_expire(
                 TC_IOT_CONFIG_AUTH_API_URL, TC_IOT_CONFIG_ROOT_CA,
                 timestamp, nonce,
-                &p_client_config->device_info);
+                &p_client_config->device_info,
+                TC_IOT_TOKEN_MAX_EXPIRE_SECOND
+                );
         if (ret != TC_IOT_SUCCESS) {
             tc_iot_hal_printf("refresh token failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);
             return 0;
@@ -117,8 +119,6 @@ int run_shadow(tc_iot_shadow_config * p_client_config) {
     int buffer_len = sizeof(buffer);
     char reported[256];
     char desired[256];
-    char session_id[TC_IOT_SESSION_ID_LEN+1];
-    int session_id_len = sizeof(session_id);
     tc_iot_shadow_client client;
     tc_iot_shadow_client* p_shadow_client = &client;
 

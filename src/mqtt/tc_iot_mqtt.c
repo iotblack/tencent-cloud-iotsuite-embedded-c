@@ -94,7 +94,7 @@ static int _handle_reconnect(tc_iot_mqtt_client* c) {
     }
 
     if (TC_IOT_MAX_RECONNECT_WAIT_INTERVAL < c->reconnect_timeout_ms) {
-#ifdef TC_IOT_MQTT_RECONNECT_FOREVER
+#ifdef ENABLE_MQTT_RECONNECT_FOREVER
         c->reconnect_timeout_ms = TC_IOT_MAX_RECONNECT_WAIT_INTERVAL;
         TC_IOT_LOG_TRACE("mqtt reconnect timer reset to %dms.", c->reconnect_timeout_ms);
 #else
@@ -292,6 +292,8 @@ static int readPacket(tc_iot_mqtt_client* c, tc_iot_timer* timer) {
     if (timer_left_ms <= 0) {
         timer_left_ms = 1;
     }
+    timer_left_ms += TC_IOT_MQTT_MAX_REMAIN_WAIT_MS;
+
     decodePacket(c, &rem_len, timer_left_ms);
     len += MQTTPacket_encode(
         c->readbuf + 1,
@@ -314,6 +316,8 @@ static int readPacket(tc_iot_mqtt_client* c, tc_iot_timer* timer) {
         if (timer_left_ms <= 0) {
             timer_left_ms = 1;
         }
+        timer_left_ms += TC_IOT_MQTT_MAX_REMAIN_WAIT_MS;
+
         rc = c->ipstack.do_read(&(c->ipstack), c->readbuf + len, rem_len,
                 timer_left_ms);
         if (rc != rem_len) {
@@ -1029,7 +1033,11 @@ int tc_iot_mqtt_publish(tc_iot_mqtt_client* c, const char* topicName,
         c->buf, c->buf_size, 0, message->qos, message->retained, message->id,
         topic, (unsigned char*)message->payload, message->payloadlen);
     if (len <= 0) {
-        TC_IOT_LOG_ERROR("MQTTSerialize_publish failed, please check you payload.");
+        if (MQTTPACKET_BUFFER_TOO_SHORT == len) {
+            TC_IOT_LOG_ERROR("MQTTSerialize_publish failed, buffer not enough, please increase c->buf_size=%d larger", (int)c->buf_size);
+        } else {
+            TC_IOT_LOG_ERROR("MQTTSerialize_publish failed, please check you payload.");
+        }
         goto exit;
     }
     if ((rc = _send_packet(c, len, &timer)) != TC_IOT_SUCCESS) {
