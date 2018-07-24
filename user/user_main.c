@@ -196,7 +196,7 @@ void event_handler(System_Event_t *event)
             sntpfn();
             got_ip_flag = 1;
             if (xHandleTaskLight == NULL) {
-                xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
+                xTaskCreate(light_demo, "light_demo", 10240, NULL, 5, &xHandleTaskLight);
                 tc_iot_hal_printf("\nMQTT task started...\n");
             } else {
                 tc_iot_hal_printf("\nMQTT task already started...\n");

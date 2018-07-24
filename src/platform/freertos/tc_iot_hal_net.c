@@ -79,16 +79,16 @@ int tc_iot_hal_net_write(tc_iot_network_t* n, const unsigned char* buffer,
 
     TC_IOT_LOG_TRACE("before send, len=%d, timeout_ms=%d, fd=%d", len, timeout_ms,n->net_context.fd);
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
-    /* do { */
-        /* TC_IOT_LOG_TRACE("selecting readysock"); */
-        /* readysock = select(n->net_context.fd + 1, NULL, &fdset, NULL, &timeout); */
-        /* if (readysock == 0) { */
-            /* TC_IOT_LOG_TRACE("timeout no sock ready, but try send data."); */
-            /* [> return TC_IOT_SEND_PACK_FAILED; <] */
-        /* } else { */
-            /* TC_IOT_LOG_TRACE("readysock = %d", readysock); */
-        /* } */
-    /* } while (readysock < 0); */
+    do {
+        TC_IOT_LOG_TRACE("selecting readysock");
+        readysock = select(n->net_context.fd + 1, NULL, &fdset, NULL, &timeout);
+        if (readysock == 0) {
+            TC_IOT_LOG_TRACE("timeout no sock ready, but try send data.");
+            return TC_IOT_SEND_PACK_FAILED;
+        } else {
+            TC_IOT_LOG_TRACE("readysock = %d", readysock);
+        }
+    } while (readysock < 0);
     if (FD_ISSET(n->net_context.fd, &fdset)) {
         do {
             TC_IOT_LOG_TRACE("send : sentLen=%d, len=%d, rc=%d", sentLen, len, rc);
@@ -99,6 +99,7 @@ int tc_iot_hal_net_write(tc_iot_network_t* n, const unsigned char* buffer,
             } else if (rc < 0) {
                 sentLen = rc;
                 TC_IOT_LOG_TRACE("sent failed: sentLen=%d, rc=%d", sentLen, rc);
+                //tc_iot_hal_sleep_ms(200);
                 break;
             } else {
                 TC_IOT_LOG_TRACE("sent zero: sentLen=%d, rc=%d", sentLen, rc);

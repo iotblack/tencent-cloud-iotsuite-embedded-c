@@ -23,8 +23,8 @@ echo "Erasing the flash first"
    write_flash -fm dio -ff 20m -fs detect \
    0x0000 "$FirmwareDir/bin/boot_v1.7.bin" \
    0x01000 "$AppDir/bin/upgrade/user1.2048.new.5.bin" \
-   0x3fc000 "$FirmwareDir/bin/esp_init_data_default.bin"  \
    0x7e000 "$FirmwareDir/bin/blank.bin"  \
+   0x3fc000 "$FirmwareDir/bin/esp_init_data_default.bin"  \
    0x3fe000 "$FirmwareDir/bin/blank.bin"
  
 echo "Check the boot by typing: miniterm.py $port 74880"
