@@ -31,11 +31,17 @@
 #include "gpio.h"
 #include "tc_iot_export.h"
 
-#define HEAP_CHECK_TASK 1
+#define HEAP_CHECK_TASK 0
 
 #define TASK_CYCLE 2000
+
+#if !defined(WIFI_SSID)
 #define WIFI_SSID       "wifitest"       // type:string, your AP/router SSID to config your device networking
+#endif
+
+#if !defined(WIFI_PASSWORD)
 #define WIFI_PASSWORD   "wifitest12345"       // type:string, your AP/router password
+#endif
 
 
 void light_demo(void *pvParameter);
@@ -196,7 +202,7 @@ void event_handler(System_Event_t *event)
             sntpfn();
             got_ip_flag = 1;
             if (xHandleTaskLight == NULL) {
-                xTaskCreate(light_demo, "light_demo", 10240, NULL, 5, &xHandleTaskLight);
+                xTaskCreate(light_demo, "light_demo", 40240, NULL, 5, &xHandleTaskLight);
                 tc_iot_hal_printf("\nMQTT task started...\n");
             } else {
                 tc_iot_hal_printf("\nMQTT task already started...\n");
