@@ -50,7 +50,12 @@ int tc_iot_hal_sleep_ms(long ms) {
 }
 
 long tc_iot_hal_random() {
-    return (unsigned int)os_random();
+    long ret = os_random();
+    if (ret > 0 ) {
+        return ret;
+    } else {
+        return 0-ret;
+    }
 }
 
 void tc_iot_hal_srandom(unsigned int seed) {

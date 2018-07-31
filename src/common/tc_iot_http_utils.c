@@ -172,7 +172,7 @@ int tc_iot_calc_auth_sign(char* sign_out, int max_sign_len, const char* secret, 
     ret = tc_iot_calc_sign(
         sha256_digest, sizeof(sha256_digest),
         secret,
-        "clientId=%s&deviceName=%s&expire=%ld&nonce=%ld&productId=%s&timestamp=%ld",
+        "clientId=%s&deviceName=%s&expire=%d&nonce=%d&productId=%s&timestamp=%d",
         client_id, device_name, expire, nonce,
         product_id, timestamp);
 
@@ -183,7 +183,7 @@ int tc_iot_calc_auth_sign(char* sign_out, int max_sign_len, const char* secret, 
        tc_iot_mem_usage_log("b64_buf", sizeof(b64_buf), ret);
     }
 
-    TC_IOT_LOG_TRACE("tc_iot_calc_auth_sign source clientId=%s&deviceName=%s&expire=%ld&nonce=%ld&productId=%s&timestamp=%ld sec %s sig %s\n", 
+    TC_IOT_LOG_TRACE("tc_iot_calc_auth_sign source clientId=%s&deviceName=%s&expire=%d&nonce=%d&productId=%s&timestamp=%d sec %s sig %s\n", 
             client_id, device_name, expire, nonce,product_id, timestamp,
             secret, b64_buf);
 
@@ -228,7 +228,7 @@ static int add_url_long_field(tc_iot_yabuffer_t* buffer, const char* prefix,
     current = tc_iot_yabuffer_current(buffer);
     buffer_left = tc_iot_yabuffer_left(buffer);
 
-    ret = tc_iot_hal_snprintf(current, buffer_left, "%ld", val);
+    ret = tc_iot_hal_snprintf(current, buffer_left, "%d", val);
 
     if (ret > 0) {
         tc_iot_yabuffer_forward(buffer, ret);
@@ -295,7 +295,7 @@ static int tc_iot_calc_active_device_sign(char* sign_out, int max_sign_len,
     ret = tc_iot_calc_sign(
         sha256_digest, sizeof(sha256_digest),
         product_secret,
-        "deviceName=%s&nonce=%ld&productId=%s&timestamp=%ld",
+        "deviceName=%s&nonce=%d&productId=%s&timestamp=%d",
         device_name, nonce,
         product_id, timestamp);
 
@@ -310,7 +310,7 @@ static int tc_iot_calc_active_device_sign(char* sign_out, int max_sign_len,
     if (url_ret < max_sign_len) {
         sign_out[url_ret] = '\0';
     }
-    TC_IOT_LOG_DEBUG(" tc_iot_calc_active_device_sign deviceName=%s&nonce=%ld&productId=%s&timestamp=%ld sign:%s", 
+    TC_IOT_LOG_DEBUG(" tc_iot_calc_active_device_sign deviceName=%s&nonce=%d&productId=%s&timestamp=%d sign:%s", 
             device_name, nonce,product_id, timestamp , sign_out);
     return url_ret;
 }
@@ -701,7 +701,7 @@ int tc_iot_create_mqapi_rpc_json(char* form, int max_form_len,
     ret = tc_iot_calc_sign(
             sha256_digest, sizeof(sha256_digest),
             secret,
-            "deviceName=%s&message=%s&nonce=%ld&productId=%s&timestamp=%ld",
+            "deviceName=%s&message=%s&nonce=%d&productId=%s&timestamp=%d",
              device_name,message,nonce,product_id,timestamp
         );
 

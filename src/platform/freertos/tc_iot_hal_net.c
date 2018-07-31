@@ -23,7 +23,7 @@ int tc_iot_hal_net_read(tc_iot_network_t* n, unsigned char* buffer,
     timeout.tv_sec = 0;
     timeout.tv_usec = timeout_ms * 1000;
 
-    TC_IOT_LOG_TRACE("before read, len=%d, timeout_ms=%d", len, timeout_ms);
+    /* TC_IOT_LOG_TRACE("before read, len=%d, timeout_ms=%d", len, timeout_ms); */
     vTaskSetTimeOutState(&xTimeOut); /* Record the time at which this function was entered. */
     if (select(n->net_context.fd + 1, &fdset, NULL, NULL, &timeout) > 0) {
         if (FD_ISSET(n->net_context.fd, &fdset)) {

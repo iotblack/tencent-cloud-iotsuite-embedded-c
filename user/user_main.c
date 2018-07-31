@@ -197,13 +197,6 @@ void heap_check_task(void *para)
 
 void user_init(void)
 {
-    // default baudrate: 74880, change it if necessary
-    //    UART_SetBaudrate(0, 115200);
-    //    UART_SetBaudrate(1, 115200);
-
-    extern unsigned int max_content_len;    // maxium fragment length in bytes, more info see as RFC 6066: part 4
-    max_content_len = 4 * 1024;
-
     /* hal_micros_set_default_time();  // startup millisecond timer */
     tc_iot_hal_printf("SDK version:%s \n", system_get_sdk_version());
     tc_iot_hal_printf("\n******************************************  \n  SDK compile time:%s %s\n******************************************\n\n", __DATE__, __TIME__);
@@ -211,15 +204,9 @@ void user_init(void)
     got_ip_flag = 0;
     initialize_wifi();
 
-    /* user_uart_init_new(); */
-
-	/* ssc_attach(SSC_BR_74880); */
-    /* ssc_register(sscCmdSet, SSC_CMD_N, iotsuite_at_help); */
-
 #if HEAP_CHECK_TASK
     xTaskCreate(heap_check_task, "heap_check_task", 128, NULL, 5, NULL);
 #endif
-    /* tc_iot_hal_printf("Ready\r\n"); */
 }
 
 
