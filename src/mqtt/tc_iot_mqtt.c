@@ -210,8 +210,8 @@ int tc_iot_mqtt_init(tc_iot_mqtt_client* c,
     c->command_timeout_ms = p_client_config->command_timeout_ms;
     c->buf_size = TC_IOT_CLIENT_SEND_BUF_SIZE;
     c->readbuf_size = TC_IOT_CLIENT_READ_BUF_SIZE;
-    TC_IOT_LOG_TRACE("mqtt client buf_size=%d,readbuf_size=%d,", c->buf_size,
-              c->readbuf_size);
+    TC_IOT_LOG_TRACE("mqtt client buf_size=%d,readbuf_size=%d,", (int)c->buf_size,
+              (int)c->readbuf_size);
     c->auto_reconnect = p_client_config->auto_reconnect;
     c->clean_session = p_client_config->clean_session;
     c->default_msg_handler = p_client_config->default_msg_handler;
@@ -423,10 +423,10 @@ int keepalive(tc_iot_mqtt_client* c) {
     if (tc_iot_hal_timer_is_expired(&c->last_sent) ||
         tc_iot_hal_timer_is_expired(&c->last_received)) {
         if (c->ping_outstanding) {
-            /* TC_IOT_LOG_TRACE("keep alive heartbeat failed, ts=%ld", tc_iot_hal_timestamp(NULL)); */
+            /* TC_IOT_LOG_TRACE("keep alive heartbeat failed, ts=%d", tc_iot_hal_timestamp(NULL)); */
             rc = TC_IOT_FAILURE;
         } else {
-            /* TC_IOT_LOG_TRACE("keep alive heartbeat sending, ts=%ld", tc_iot_hal_timestamp(NULL)); */
+            /* TC_IOT_LOG_TRACE("keep alive heartbeat sending, ts=%d", tc_iot_hal_timestamp(NULL)); */
             tc_iot_hal_timer_countdown_second(&c->ping_timer, c->keep_alive_interval);
             len = MQTTSerialize_pingreq(c->buf, c->buf_size);
             if (len > 0 &&
@@ -1028,7 +1028,6 @@ int tc_iot_mqtt_publish(tc_iot_mqtt_client* c, const char* topicName,
         message->id = _get_next_pack_id(c);
     }
 
-    tc_iot_hal_printf("[heap check task] $$free heap size:%d,\n", system_get_free_heap_size());
     len = MQTTSerialize_publish(
         c->buf, c->buf_size, 0, message->qos, message->retained, message->id,
         topic, (unsigned char*)message->payload, message->payloadlen);
@@ -1144,4 +1143,43 @@ void tc_iot_mqtt_destroy(tc_iot_mqtt_client* c) {
             c->message_handlers[i].topicFilter = NULL;
         }
     }
+}
+
+int tc_iot_mqtt_refresh_dynamic_sign(long timestamp, long nonce, tc_iot_device_info* p_device_info) {
+    char * password = p_device_info->password;
+    char * product_id = p_device_info->product_id;
+    char * client_id = p_device_info->client_id;
+    char * secret = p_device_info->secret;
+    char * device_name = p_device_info->device_name;
+
+    int password_len = 0;
+    int password_left_len = 0;
+    int ret = 0;
+
+    strcpy(p_device_info->username, p_device_info->device_name);
+
+    tc_iot_hal_snprintf(password,
+                        sizeof(p_device_info->password),
+                        "productId=%s&nonce=%d&timestamp=%d&signature=",
+                        product_id,
+                        (int)nonce,
+                        (int)timestamp
+                        );
+
+    password_len = strlen(password);
+    password_left_len = sizeof(p_device_info->password) - password_len;
+    password = password + password_len;
+
+    ret = tc_iot_calc_mqtt_dynamic_sign(password,
+                                   password_left_len,
+                                   secret, 
+                                   client_id,
+                                   device_name,
+                                   nonce,
+                                   product_id,
+                                   timestamp);
+
+    TC_IOT_LOG_TRACE("usename[%s] password[%s]", p_device_info->username, p_device_info->password);
+
+    return ret;
 }
