@@ -2,10 +2,10 @@
 #define TC_IOT_COMPILE_FLAGS_H
 
 #define ENABLE_MQTT
-#define ENABLE_OTA
-#define ENABLE_DATA_TEMPLATE
+// #define ENABLE_OTA
+// #define ENABLE_DATA_TEMPLATE
 
-#define ENABLE_COAP
+// #define ENABLE_COAP
 
 /* #undef ENABLE_TLS */
 /* #undef ENABLE_DTLS */

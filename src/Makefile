@@ -15,7 +15,6 @@ ifndef PDIR
 UP_EXTRACT_DIR = ..
 GEN_LIBS = libtc_iot_suite.a
 COMPONENTS_libtc_iot_suite = common/libsrc.a \
-			     iotsuite/libsrc.a \
 				 mqtt/libsrc.a \
 				 http/libsrc.a \
 			     platform/libtc_iot_hal.a

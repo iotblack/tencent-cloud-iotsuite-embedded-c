@@ -27,18 +27,22 @@
 #include "esp_common.h"
 
 #include "tc_iot_device_config.h"
-#include "tc_iot_device_logic.h"
 #include "gpio.h"
 #include "tc_iot_export.h"
 
-#define HEAP_CHECK_TASK 1
+#define HEAP_CHECK_TASK 0
 
 #define TASK_CYCLE 2000
+#if !defined(WIFI_SSID)
 #define WIFI_SSID       "wifitest"       // type:string, your AP/router SSID to config your device networking
+#endif
+
+#if !defined(WIFI_PASSWORD)
 #define WIFI_PASSWORD   "wifitest12345"       // type:string, your AP/router password
+#endif
 
 
-void light_demo(void *pvParameter);
+void app_main(void *pvParameter);
 void event_handler(System_Event_t *event);
 
 void user_uart_init_new(void);
@@ -149,44 +153,6 @@ void initialize_wifi(void)
     wifi_set_event_handler_cb(event_handler);
 }
 
-void command_callback(char * buffer) {
-    const char * WIFI_COMMAND = "AT+WIFI";
-    const char * MQTT_COMMAND = "AT+MQTT";
-
-    if (0 == memcmp(buffer, WIFI_COMMAND, strlen(WIFI_COMMAND))) {
-        printf("doing:%s\n",buffer);
-        wifi_set_opmode(STATION_MODE);
-
-        // set AP parameter
-        struct station_config config;
-        bzero(&config, sizeof(struct station_config));
-        sprintf(config.ssid, "wifitest");
-        sprintf(config.password, "wifitest12345");
-        wifi_station_set_config(&config);
-
-        wifi_station_set_auto_connect(true);
-        wifi_station_set_reconnect_policy(true);
-        wifi_set_event_handler_cb(event_handler);
-
-        wifi_station_connect();
-    } else if (0 == memcmp(buffer, MQTT_COMMAND, strlen(MQTT_COMMAND))) {
-        printf("doing:%s\n",buffer);
-        if (!got_ip_flag) {
-            printf("ERROR %s\n", "network not ready");
-            return;
-        }
-        if (xHandleTaskLight == NULL) {
-            xTaskCreate(light_demo, "light_demo", 8192, NULL, 5, &xHandleTaskLight);
-            tc_iot_hal_printf("\nMQTT task started...\n");
-        } else {
-            tc_iot_hal_printf("\nMQTT task already started...\n");
-        }
-    } else {
-        printf("AT+COMMAND received:%s\n",buffer);
-    }
-    return;
-}
-
 // WiFi callback function
 void event_handler(System_Event_t *event)
 {
@@ -195,8 +161,9 @@ void event_handler(System_Event_t *event)
             tc_iot_hal_printf("WiFi connected\n");
             sntpfn();
             got_ip_flag = 1;
+            /* app_main(NULL); */
             if (xHandleTaskLight == NULL) {
-                xTaskCreate(light_demo, "light_demo", 10240, NULL, 5, &xHandleTaskLight);
+                xTaskCreate(app_main, "app_main", 2048, NULL, 5, &xHandleTaskLight);
                 tc_iot_hal_printf("\nMQTT task started...\n");
             } else {
                 tc_iot_hal_printf("\nMQTT task already started...\n");
