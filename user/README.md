@@ -87,12 +87,4 @@ cd tools
 
 ### 参考开发板：
 1. wemos d1 开发板： https://wiki.wemos.cc/products:d1:d1_mini
-2. RGB LED 连线方式：
-```shell
-R  -> D1
-G  -> D2
-B  -> D3
-正 -> 3V3
-```
-![board](https://user-images.githubusercontent.com/990858/38666191-ef3eed8c-3e70-11e8-8b73-cf2ac324fd5b.jpg)
 
