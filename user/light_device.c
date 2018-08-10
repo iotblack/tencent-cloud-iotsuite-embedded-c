@@ -28,8 +28,8 @@
 #define DEVICE_PIN_LED_GREEN   DP_D2
 #define DEVICE_PIN_LED_BLUE    DP_D3
 
-#define DEVICE_SWITCH_LED_ON    0
-#define DEVICE_SWITCH_LED_OFF   1
+#define DEVICE_SWITCH_LED_ON    1
+#define DEVICE_SWITCH_LED_OFF   0
 
 extern tc_iot_shadow_config g_tc_iot_shadow_config;
 
