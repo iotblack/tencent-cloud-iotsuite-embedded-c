@@ -31,7 +31,7 @@
 #include "gpio.h"
 #include "tc_iot_export.h"
 
-#define HEAP_CHECK_TASK 0
+#define HEAP_CHECK_TASK 1
 
 #define TASK_CYCLE 2000
 
@@ -202,7 +202,7 @@ void event_handler(System_Event_t *event)
             sntpfn();
             got_ip_flag = 1;
             if (xHandleTaskLight == NULL) {
-                xTaskCreate(light_demo, "light_demo", 40240, NULL, 5, &xHandleTaskLight);
+                xTaskCreate(light_demo, "light_demo", 4096, NULL, 5, &xHandleTaskLight);
                 tc_iot_hal_printf("\nMQTT task started...\n");
             } else {
                 tc_iot_hal_printf("\nMQTT task already started...\n");
