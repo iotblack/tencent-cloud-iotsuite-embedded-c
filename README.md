@@ -2,7 +2,7 @@
 
 ### SDK 获取
 
-腾讯云 iotsuite C语言版 SDK的下载地址： [tencent-cloud-iotsuite-embedded-c.git](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c.git)
+腾讯云 IoT Suite C SDK 的下载地址： [tencent-cloud-iotsuite-embedded-c.git](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c.git)
 
 ```shell
 git clone https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c.git
@@ -10,11 +10,15 @@ git clone https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c.git
 
 
 ### 开发环境
-1. SDK 在 Linux 环境下的测试和验证，主要基于 Ubuntu 16.04 版本，gcc-5.4 (建议至少 gcc-4.7+)，Python 2.7.12+(代码生成及控制台命令行脚本)。
-2. 安装cmake工具 [http://www.cmake.org/download/](http://www.cmake.org/download/) 。
-3. 配置并运行示例：
-- [mqtt](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c/blob/master/examples/linux/)
-- [iotsuite_app](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c/blob/master/examples/linux/app)
+1. SDK 在 Linux 环境下的测试和验证，主要基于 Ubuntu 16.04 版本，gcc-5.4 (建议至少 gcc-4.7+)，Python 2.7.12+(代码生成及控制台命令行脚本)，cmake 2.8+。
+
+```shell
+sudo apt install cmake python2.7 git build-essential
+```
+
+2. 配置并运行示例：
+- [基础版 MQTT 示例](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c/blob/master/examples/basic_edition/mqtt)
+- [高级版 MQTT 示例](https://github.com/tencentyun/tencent-cloud-iotsuite-embedded-c/blob/master/examples/advanced_edition/mqtt)
 
 ### 编译及运行
 1. 执行下面的命令，编译示例程序：
@@ -31,29 +35,111 @@ make
 
 ```shell
 bin
-|-- demo_mqtt               # MQTT 连接云服务演示程序
-|-- demo_shadow             # Shadow 影子设备操作演示程序
-|-- iotsuite_app            # 通用数据模板演示程序
-|-- light                   # 基于数据模板的 RGB LED Light 演示程序
-|-- demo_coap_client        # CoAP 连接云服务演示程序
+|-- basic_mqtt               # 基础版 MQTT 连接云服务演示程序
+|-- basic_coap               # 基础版 CoAP 连接云服务演示程序
+|-- advaned_mqtt             # 高级版 MQTT 连接云服务演示程序
+|-- advaned_coap             # 高级版 CoAP 连接云服务演示程序
+|-- scn_ota                  # OTA 功能演示程序
+|-- scn_smartbox             # 基于基础版 MQTT 协议开发的智能货柜演示程序
+|-- scn_light                # 基于高级版 MQTT 协议开发的智能灯演示程序
 lib
-|-- libtc_iot_suite.a       # SDK 的核心层, libtc_iot_hal、libtc_iot_common 提供连接云服务的能力
-|-- libtc_iot_coap.a        # SDK CoAP 协议封装
 |-- libtc_iot_common.a      # SDK 基础工具库，负责http、json、base64等解析和编解码功能
 |-- libtc_iot_hal.a         # SDK 的硬件及操作系统抽象，负责内存、定时器、网络交互等功能
+|-- libtc_iot_mqtt_client.a # SDK 基础版 MQTT 协议库，负责 MQTT 协议解析及连接管理
+|-- libtc_iot_suite.a       # SDK 高级版功能库，基于 MQTT 封装了高级版数据模板功能。
+|-- libtc_iot_coap.a        # SDK CoAP 协议封装，用于资源受限设备，通过 CoAP 协议使用基础版消息上行及高级版数据模板功能。
+|-- libtc_iot_http_mqapi.a  # SDK HTTP RPC 协议封装，用于资源受限设备，通过 HTTP 协议使用高级版数据模板功能。
+|-- libtc_iot_ota.a         # SDK OTA 功能库，提供了 OTA 协议收发处理及固件下载功能
+|-- libMQTTPacketClient.a   # 第三方库，用于 MQTT 协议解析
+|-- libmbedtls.a            # 第三方库，用于 TLS 及 DTLS 协议处理
+|-- libjsmn.a               # 第三方库，用于 JSON 协议解析
+
 ```
 
 3. 执行示例程序：
 
 ```shell
+# 注意：在运行前，每个示例程序都需要预先配置对应的产品 ID、设备名称、设备密钥等信息，
+# 请注意参考 examples 目录下对应示例程序的 README，进行预先配置。
+
 cd bin
 
 # 运行demo程序
-./demo_mqtt
+./basic_mqtt
 # or
-./iotsuite_app
+./advanced_app
+
+...
 
 ```
+
+## SDK接口说明
+以下是C SDK 提供的功能和对应 API，用于设备端编写业务逻辑，API 接口暂不支持多线程调用，在多线程环境下，请勿跨线程调用。 更加详细的接口功能说明请查看 [include/tc_iot_export.h](include/tc_iot_export.h) 中的注释。
+
+### 1. 日志接口
+
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1          | tc_iot_set_log_level | 设置打印的日志等级 |
+| 2          | tc_iot_get_log_level | 返回日志输出的等级 |
+| 3          | tc_iot_log_level_enabled | 判断当前等级日志是否打开 |
+
+### 2. MQTT 鉴权接口
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1          | tc_iot_refresh_auth_token | 鉴权模式为动态令牌模式时，通过本接口获取访问 MQTT 服务端动态用户名和密码|
+
+### 3. MQTT 接口
+
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1 | tc_iot_mqtt_client_construct | 构造 MQTT client，并连接MQ服务器 |
+| 2 | tc_iot_mqtt_client_destroy | 关闭 MQTT client 连接，并销毁 MQTT client |
+| 3 | tc_iot_mqtt_client_yield | MQTT Client 主循环，包含心跳维持、上行消息响应超时检测、服务器下行消息收取等操作。|
+| 4 | tc_iot_mqtt_client_publish | 向指定的 Topic 发布消息 |
+| 5 | tc_iot_mqtt_client_subscribe | 订阅指定 Topic 的消息 |
+| 6 | tc_iot_mqtt_client_unsubscribe | 取消订阅已订阅的 Topic |
+| 7 | tc_iot_mqtt_client_is_connected | 判断 MQTT client 目前是否已连接 |
+| 8 | tc_iot_mqtt_client_disconnecd | 断开 MQTT client 与服务端的连接 |
+
+### 4. 数据模板接口
+
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1 | tc_iot_server_init | 根据设备配置参数，初始化服务。 |
+| 2 | tc_iot_server_loop | 服务任务主循环函数，接收服务推送及响应数据。 |
+| 3 | tc_iot_server_destroy | 数据模板服务析构处理，释放资源。 |
+| 4 | tc_iot_report_device_data | 上报设备数据模板参数最新数据状态，更新到服务端。|
+| 5 | tc_iot_confirm_devcie_data | 根据设备控制端要求，发送设备数据模板参数控制指令，更新到服务端，推送给设备。 |
+
+### 5. CoAP 接口
+
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1 | tc_iot_coap_construct | 根据 CoAP 设备配置参数，初始化服务。 |
+| 2 | tc_iot_coap_destroy | CoAP 服务析构处理，释放资源。 |
+| 3 | tc_iot_coap_auth | 发起认证，获取后续服务所需的设备 Token。 |
+| 4 | tc_iot_coap_send_message | 向服务端发送 CoAP 消息。 |
+| 5 | tc_iot_coap_yield | CoAP client 主循环，包含上行消息响应超时检测、服务器下行消息收取等操作。|
+| 6 | tc_iot_coap_get_message_code | 获取 CoAP 消息请求或返回码。 |
+| 7 | tc_iot_coap_get_message_payload | 获取 CoAP 消息的 Payload 内容。|
+
+### 6. OTA 接口
+
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1 | tc_iot_ota_construct | 根据设备配置参数，初始化 OTA 服务。 |
+| 2 | tc_iot_ota_destroy | OTA 服务析构处理，取消 OTA 消息订阅，释放资源。 |
+| 3 | tc_iot_ota_report_firm | 上报设备系统信息，例如，硬件版本、MAC 地址、IMEI、固件版本、SDK 版本等。|
+| 4 | tc_iot_ota_report_upgrade | OTA 升级执行过程中，上报固件下载及升级进度。 |
+| 5 | tc_iot_ota_request_content_length | 向固件下载服务器，发起 HTTP HEAD 请求，获取固件长度。|
+| 6 | tc_iot_ota_download | 根据指定的固件 URL 地址，下载固件 |
+
+### 7. HTTP 接口
+| 序号        | 函数名      | 说明        |
+| ---------- | ---------- | ---------- |
+| 1 | tc_iot_http_mqapi_rpc | 通过 HTTP 接口 调用数据模板数据服务。|
+
 
 
 ## 移植说明
