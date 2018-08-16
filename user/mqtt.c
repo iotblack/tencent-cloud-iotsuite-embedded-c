@@ -204,7 +204,7 @@ int run_mqtt(tc_iot_mqtt_client_config* p_client_config) {
     }
 
     tc_iot_mqtt_client_yield(p_client, timeout);
-    report_status(p_client);
+    /* report_status(p_client); */
 
     while (!stop) {
         tc_iot_mqtt_client_yield(p_client, timeout);
