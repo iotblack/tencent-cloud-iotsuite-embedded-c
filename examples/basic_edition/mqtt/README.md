@@ -5,7 +5,7 @@
     - ${product_id}/${device_name}/cmd ，用于设备端接收指令。
     - ${product_id}/${device_name}/update ，用于设备端上报数据。
 
-3. 进入【基本信息】也，点击【导出】，导出 iot-xxxxx.json 数据模板描述文档，将 iot-xxxxx.json 文档放到 examples/basic_edition/mqtt 目录下覆盖 iot-product.json 文件。
+3. 进入【基本信息】，点击【导出】，导出 iot-xxxxx.json 文档，将 iot-xxxxx.json 文档放到 examples/basic_edition/mqtt 目录下，覆盖 iot-product.json 文件。
 4. 通过脚本自动生成演示配置文件。
 
 ```shell
@@ -16,38 +16,11 @@ python tc_iot_code_generator.py -c ../examples/basic_edition/mqtt/iot-product.js
 
 执行成功后会看到有如下提示信息：
 ```shell
-加载 ../examples/basic_editon/mqtt/iot-product.json 文件成功
-文件 ../examples/basic_editon/mqtt/tc_iot_device_config.h 生成成功
+加载 ../examples/basic_edition/mqtt/iot-product.json 文件成功
+文件 ../examples/basic_edition/mqtt/tc_iot_device_config.h 生成成功
 ```
 
-打开 tc_iot_device_config.h ，可以看到生成的如下产品相关信息：
-```c
-...
-/* 设备激活及获取 secret 接口，地址格式为：<机房标识>.auth-device-iot.tencentcloudapi.com/secret */
-/* Token接口，地址格式为：<机房标识>.auth-device-iot.tencentcloudapi.com/token */
-/* 机房标识：
-    广州机房=gz
-    北京机房=bj
-    ...
-*/
-#ifdef ENABLE_TLS
-#define TC_IOT_CONFIG_AUTH_API_URL "https://gz.auth-device-iot.tencentcloudapi.com/token"
-#define TC_IOT_CONFIG_ACTIVE_API_URL "https://gz.auth-device-iot.tencentcloudapi.com/secret"
-#else
-#define TC_IOT_CONFIG_AUTH_API_URL "http://gz.auth-device-iot.tencentcloudapi.com/token"
-#define TC_IOT_CONFIG_ACTIVE_API_URL "http://gz.auth-device-iot.tencentcloudapi.com/secret"
-#endif
-
-#define TC_IOT_CONFIG_ACTIVE_API_URL_DEBUG   "http://gz.auth.iot.cloud.tencent.com/secret"
-#define TC_IOT_CONFIG_AUTH_API_URL_DEBUG	 "http://gz.auth.iot.cloud.tencent.com/token"
-...
-#define TC_IOT_CONFIG_SERVER_HOST "mqtt-xxxx.ap-guangzhou.mqtt.tencentcloudmq.com"
-#define TC_IOT_CONFIG_DEVICE_PRODUCT_ID "iot-yyyy"
-#define TC_IOT_CONFIG_DEVICE_PRODUCT_KEY "mqtt-zzzz"
-...
-```
-
-4. 修改 tc_iot_device_config.h 配置，设置 Device Name 和 Device Secret：
+5. 修改 tc_iot_device_config.h 配置，设置 Device Name 和 Device Secret：
 ```c
 /* 设备密钥，可以在产品“设备管理”->“设备证书”->“Device Secret”位置找到*/
 #define TC_IOT_CONFIG_DEVICE_SECRET "00000000000000000000000000000000"
@@ -56,16 +29,15 @@ python tc_iot_code_generator.py -c ../examples/basic_edition/mqtt/iot-product.js
 #define TC_IOT_CONFIG_DEVICE_NAME "device_name"
 ```
 
-5. 代码及配置生成成功后，进入 build 目录，开始编译。
+6. 代码及配置生成成功后，进入 build 目录，开始编译。
 
 ```shell
 cd ../build
 make
 ```
 
-
 ## 运行程序
-### 基于 JSON 协议的 MQTT 示例
+### MQTT 示例
 编译完成后，在 build/bin/ 目录下，会产生一个 basic_mqtt 程序。
 
 ```shell
@@ -91,6 +63,15 @@ make
 
 #### MQTT 收发消息
 收发 MQTT 消息，参见 demo_mqtt.c 中tc_iot_mqtt_client_publish(发送消息) & tc_iot_mqtt_client_subscribe(订阅 Topic) 。
+
+## 数据交互流程
+- 下图展示的流程为：
+    1. 设备上线，并订阅下行消息 Topic ；
+    2. 用户调用 API，通过发送 MQTT 消息到指定 Topic的方式，发送控制指令；
+    3. 服务端推送消息给设备，设备收到服务端推送的消息，进行处理，并上报处理结果;
+    4. 服务端收到设备上报结果后，根据用户在规则引擎配置的地址，转发数据到用户的服务器；
+
+![图例](https://user-images.githubusercontent.com/990858/44084061-504185d0-9fe8-11e8-97a7-b6824530ae87.png)
 
 ## SDK MQTT API 样例及说明
 

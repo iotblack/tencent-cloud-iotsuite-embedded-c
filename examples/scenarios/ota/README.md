@@ -5,6 +5,36 @@
 ```shell
 #define TC_IOT_FIRM_VERSION "LINUXV1.0"
 ```
+3. 进入【基本信息】，点击【导出】，导出 iot-xxxxx.json 文档，将 iot-xxxxx.json 文档放到 examples/scenarios/ota 目录下，覆盖 iot-product.json 文件。
+4. 通过脚本自动生成演示配置文件。
+
+```shell
+# 进入工具脚本目录
+cd tools
+python tc_iot_code_generator.py -c ../examples/scenarios/ota/iot-product.json code_templates/tc_iot_device_config.h
+```
+
+执行成功后会看到有如下提示信息：
+```shell
+加载 ../examples/scenarios/ota/iot-product.json 文件成功
+文件 ../examples/scenarios/ota/tc_iot_device_config.h 生成成功
+```
+
+5. 修改 tc_iot_device_config.h 配置，设置 Device Name 和 Device Secret：
+```c
+/* 设备密钥，可以在产品“设备管理”->“设备证书”->“Device Secret”位置找到*/
+#define TC_IOT_CONFIG_DEVICE_SECRET "00000000000000000000000000000000"
+
+/* 设备名称，可以在产品“设备管理”->“设备名称”位置找到*/
+#define TC_IOT_CONFIG_DEVICE_NAME "device_name"
+```
+
+6. 代码及配置生成成功后，进入 build 目录，开始编译。
+
+```shell
+cd ../build
+make
+```
 
 ## 运行程序
 编译完成后，在 build/bin/ 目录下，会产生一个 scn_ota 程序。
@@ -33,6 +63,8 @@
 ## 控制台操作
 控制台上传固件，配置升级任务，下发给当前设备，即可体验 OTA 流程。
 
+## 数据交互流程
+![图例](https://user-images.githubusercontent.com/990858/44129418-c946d2f4-a07a-11e8-8867-9f379303f802.png)
 
 ## OTA 功能开发指引
 1. 初始化 OTA 服务：
@@ -62,8 +94,6 @@ tc_iot_ota_handler handler;
 ```c
     // 上报设备信息及当前版本号
     tc_iot_ota_report_firm(&handler,
-            "product", g_client_config.device_info.product_id, // 上报产品ID
-            "device", g_client_config.device_info.device_name, // 上报设备名
             "sdk-ver", TC_IOT_SDK_VERSION,  // 上报 SDK 版本
             "firm-ver",TC_IOT_FIRM_VERSION,  // 上报固件信息，OTA 升级版本号判断依据
             NULL); // 最后一个参数固定填写 NULL，作为变参结束判断
@@ -76,7 +106,10 @@ tc_iot_ota_handler handler;
     tc_iot_ota_report_upgrade(ota_handler, OTA_COMMAND_RECEIVED, NULL, 0);
     ...
     if (tc_iot_ota_version_larger(ota_handler->version, TC_IOT_FIRM_VERSION)) {
-        // 上报准备开始下载
+        // 上报版本检查结果
+        tc_iot_ota_report_upgrade(ota_handler, OTA_VERSION_CHECK, TC_IOT_OTA_MESSAGE_SUCCESS, 0);
+
+        // 上报下载进度，最后一个参数表示当前下载进度百分比
         tc_iot_ota_report_upgrade(ota_handler, OTA_DOWNLOAD, NULL, 0);
         
         // 开始下载固件
