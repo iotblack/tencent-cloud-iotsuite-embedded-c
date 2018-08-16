@@ -147,12 +147,6 @@ start:
     tc_iot_hal_printf("get random\n");
     nonce = tc_iot_hal_random();
 
-    /* 根据 product id 和device name 定义，生成发布和订阅的 Topic 名称。 */
-    snprintf(g_tc_iot_shadow_config.sub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SUB_TOPIC_FMT,
-            p_client_config->device_info.product_id,p_client_config->device_info.device_name);
-    snprintf(g_tc_iot_shadow_config.pub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_PUB_TOPIC_FMT,
-            p_client_config->device_info.product_id,p_client_config->device_info.device_name);
-
     /* 判断是否需要获取动态 token */
     token_defined = strlen(p_client_config->device_info.username) && strlen(p_client_config->device_info.password);
 
