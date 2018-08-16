@@ -82,19 +82,21 @@ void operate_device(tc_iot_shadow_local_data * light) {
                 ansi_color,
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         tc_iot_hal_printf(
-                "%s[  lighting  ]|[color:%s]|[brightness:%s]\n" ANSI_COLOR_RESET,
+                "%s[  lighting  ]|[color:%s]|[brightness:%s]|[%s]\n" ANSI_COLOR_RESET,
                 ansi_color,
                 ansi_color_name,
-                brightness_bar
+                brightness_bar,
+                light->name
                 );
     } else {
         /* 灯处于关闭状态时的展示 */
         tc_iot_hal_printf( ANSI_COLOR_YELLOW "%04d-%02d-%02d %02d:%02d:%02d " ANSI_COLOR_RESET,
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
         tc_iot_hal_printf(
-                ANSI_COLOR_YELLOW "[" "light is off" "]|[color:%s]|[brightness:%s]\n" ANSI_COLOR_RESET ,
+                ANSI_COLOR_YELLOW "[" "light is off" "]|[color:%s]|[brightness:%s]|[%s]\n" ANSI_COLOR_RESET ,
                 ansi_color_name,
-                brightness_bar
+                brightness_bar,
+                light->name
                 );
     }
 }
@@ -149,9 +151,9 @@ int main(int argc, char** argv) {
     parse_command(p_client_config, argc, argv);
 
     /* 根据 product id 和device name 定义，生成发布和订阅的 Topic 名称。 */
-    snprintf(g_tc_iot_shadow_config.sub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SUB_TOPIC_FMT,
+    snprintf(g_tc_iot_shadow_config.sub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SHADOW_SUB_TOPIC_FMT,
             p_client_config->device_info.product_id,p_client_config->device_info.device_name);
-    snprintf(g_tc_iot_shadow_config.pub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_PUB_TOPIC_FMT,
+    snprintf(g_tc_iot_shadow_config.pub_topic,TC_IOT_MAX_MQTT_TOPIC_LEN, TC_IOT_SHADOW_PUB_TOPIC_FMT,
             p_client_config->device_info.product_id,p_client_config->device_info.device_name);
 
     /* 判断是否需要获取动态 token */
@@ -160,10 +162,7 @@ int main(int argc, char** argv) {
     if (!use_static_token) {
         /* 获取动态 token */
         tc_iot_hal_printf("requesting username and password for mqtt.\n");
-        ret = tc_iot_refresh_auth_token(
-                TC_IOT_CONFIG_AUTH_API_URL, NULL,
-                timestamp, nonce,
-                &p_client_config->device_info, TC_IOT_TOKEN_MAX_EXPIRE_SECOND);
+        ret = TC_IOT_AUTH_FUNC( timestamp, nonce, &p_client_config->device_info, TC_IOT_TOKEN_MAX_EXPIRE_SECOND);
         if (ret != TC_IOT_SUCCESS) {
             tc_iot_hal_printf("refresh token failed, trouble shooting guide: " "%s#%d\n", TC_IOT_TROUBLE_SHOOTING_URL, ret);
             return 0;
