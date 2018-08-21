@@ -1,5 +1,32 @@
 #include "tc_iot_device_config.h"
+#include "gpio.h"
 #include "tc_iot_export.h"
+
+/*D1	IO, SCL	GPIO5*/
+/*D2	IO, SDA	GPIO4*/
+/*D3	IO, 10k Pull-up	GPIO0*/
+/*D4	IO, 10k Pull-up, BUILTIN_LED	GPIO2*/
+/*D5	IO, SCK	GPIO14*/
+/*D6	IO, MISO	GPIO12*/
+/*D7	IO, MOSI	GPIO13*/
+/*D8	IO, 10k Pull-down, SS	GPIO15*/
+
+#define DP_D1  5
+#define DP_D2  4
+#define DP_D3  0
+
+#define DP_D4  2
+#define DP_D5  14
+#define DP_D6  12
+#define DP_D7  13
+#define DP_D8  15
+
+#define DEVICE_PIN_LED_RED     DP_D1
+#define DEVICE_PIN_LED_GREEN   DP_D2
+#define DEVICE_PIN_LED_BLUE    DP_D3
+
+#define DEVICE_SWITCH_LED_ON    1
+#define DEVICE_SWITCH_LED_OFF   0
 
 typedef unsigned long timestamp_t;
 typedef struct _smartbox_data {
@@ -9,7 +36,7 @@ typedef struct _smartbox_data {
 } smartbox_data;
 
 smartbox_data g_tc_smartbox_data = {
-    true,
+    false,
     "full",
     "no",
 };
@@ -119,6 +146,23 @@ void report_status(tc_iot_mqtt_client * p_client)
     }
 }
 
+void led_flash(int pin, int delay_ms) {
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(pin),   DEVICE_SWITCH_LED_ON);
+    tc_iot_hal_sleep_ms(delay_ms);
+    GPIO_OUTPUT_SET(GPIO_ID_PIN(pin),   DEVICE_SWITCH_LED_OFF);
+}
+
+void show_some_response(smartbox_data * data) {
+    int i = 0;
+    if (data->door_switch) {
+        for (i = 0; i < 3; i++) {
+            led_flash(DEVICE_PIN_LED_RED, 1000);
+            led_flash(DEVICE_PIN_LED_GREEN, 1000);
+            led_flash(DEVICE_PIN_LED_BLUE, 1000);
+        }
+    }
+}
+
 void _on_message_received(tc_iot_message_data* md) {
     tc_iot_mqtt_message* message = md->message;
     jsmntok_t  json_token[TC_IOT_MAX_JSON_TOKEN_COUNT];
@@ -149,6 +193,7 @@ void _on_message_received(tc_iot_message_data* md) {
         /* len = json_token[field_index].end - json_token[field_index].start; */
         if (start[0] == 't') {
             g_tc_smartbox_data.door_switch = true;
+            show_some_response(&g_tc_smartbox_data);
         } else {
             if (!g_tc_smartbox_data.door_switch) {
                 tc_iot_hal_snprintf(g_tc_smartbox_data.fault, sizeof(g_tc_smartbox_data.fault), "bad state");
