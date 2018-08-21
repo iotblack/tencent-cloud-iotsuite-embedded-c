@@ -134,7 +134,7 @@ sudo apt install cmake python2.7 git build-essential
 cd tencent-cloud-iotsuite-embedded-c
 mkdir -p build
 cd build
-cmake ../
+cmake -DCMAKE_TOOLCHAIN_FILE=../tools/cross-compile/arm-gcc-toolchain.cmake ../
 make
 ```
 
@@ -258,6 +258,9 @@ SDK 常见错误码定义，参见：[tc_iot_const.h](include/common/tc_iot_cons
 C-SDK 中提供的 HAL 层是基于 Linux 等 POSIX 体系系统的参考实现，但并不强耦合要求实现按照 POSIX 接口方式，移植时可根据目标系统的情况，灵活调整。
 
 所有 HAL 层函数都在 include/platform/tc_iot_hal*.h 中进行声明，函数都以 tc_iot_hal为前缀。
+
+### 交叉编译
+关于如何配置 C-SDK 工程，使其支持交叉编译，可参考[交叉编译指南](tools/cross-compile/README.md)。
 
 ### 硬件及操作系统平台抽象层（HAL 层）
 SDK 抽象定义了硬件及操作系统平台抽象层（HAL 层），将所依赖的内存、定时器、网络传输交互等功能，
